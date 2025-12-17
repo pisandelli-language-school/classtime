@@ -38,7 +38,7 @@ const handleLogTime = () => {
               </div>
             </div>
             <div class="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full bg-primary rounded-full" style="width: 80%"></div>
+              <div class="h-full bg-green-500 rounded-full" style="width: 80%"></div>
             </div>
           </div>
         </div>
@@ -280,7 +280,7 @@ const handleLogTime = () => {
           <span class="truncate">Save Draft</span>
         </button>
         <button
-          class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-6 bg-primary hover:bg-primary-600 text-white text-sm font-bold shadow-lg shadow-primary/30 transition-all">
+          class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-6 bg-[#0984e3] hover:bg-[#026aa7] text-white text-sm font-bold shadow-lg shadow-[#0984e3]/30 transition-all">
           <span class="truncate">Submit Week for Approval</span>
         </button>
       </div>
