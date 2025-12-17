@@ -14,6 +14,13 @@ const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value
 }
 
+const handleImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement
+  if (target) {
+    target.src = 'https://ui-avatars.com/api/?name=' + (userMetadata.value.full_name || 'User') + '&background=random'
+  }
+}
+
 const closeDropdown = () => {
   isDropdownOpen.value = false
 }
@@ -64,7 +71,9 @@ const closeDropdown = () => {
           <button @click="toggleDropdown"
             class="flex h-10 w-10 shrink-0 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 ring-2 ring-transparent hover:ring-slate-200 dark:hover:ring-slate-700 transition-all focus:outline-none">
             <img :alt="userMetadata.full_name || 'User avatar'" class="h-full w-full object-cover"
-              :src="userMetadata.avatar_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD-4IIbkOC0tVNX_mp9JdRFphq0mImv9xRR4l4pGZoTN_PmNVd7AhvtoD531_SPTAEihPVobUq9FAaG3vE4ch8A5f_C4pbOss3xOh0hst_B77pYpRQH6ZTA5GTYzsKjYOwSzMvO1mmRY1PMvuJmQAFA8MdPf57qCRnq2PKFuyHRgLGdIOhkZamuvdj61UxtDAi48SJjp-2UWgtLxaRHdixQOx7cgIGopZG2wgZACg7xUWtxAKfAfLIOHwg06nsZkaxb16dZuXvRI2w'" />
+              referrerpolicy="no-referrer"
+              :src="userMetadata.avatar_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD-4IIbkOC0tVNX_mp9JdRFphq0mImv9xRR4l4pGZoTN_PmNVd7AhvtoD531_SPTAEihPVobUq9FAaG3vE4ch8A5f_C4pbOss3xOh0hst_B77pYpRQH6ZTA5GTYzsKjYOwSzMvO1mmRY1PMvuJmQAFA8MdPf57qCRnq2PKFuyHRgLGdIOhkZamuvdj61UxtDAi48SJjp-2UWgtLxaRHdixQOx7cgIGopZG2wgZACg7xUWtxAKfAfLIOHwg06nsZkaxb16dZuXvRI2w'"
+              @error="handleImageError" />
           </button>
 
           <!-- Dropdown Menu -->
