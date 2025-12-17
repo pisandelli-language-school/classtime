@@ -2,8 +2,17 @@
 const isModalOpen = ref(false)
 const selectedDate = ref('')
 
+const selectedEntry = ref<any>(undefined)
+
 const handleLogTime = (date: string) => {
   selectedDate.value = date
+  selectedEntry.value = undefined
+  isModalOpen.value = true
+}
+
+const handleEditEntry = (entry: any) => {
+  selectedDate.value = 'Mon 16' // In a real app efficiently derive or pass this
+  selectedEntry.value = entry
   isModalOpen.value = true
 }
 
@@ -74,6 +83,7 @@ const handleSaveEntry = (entry: any) => {
           <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
             <!-- Card 1 -->
             <div
+              @click="handleEditEntry({ id: 1, subject: 'Alice M.', hours: '1.5', startTime: '09:00', endTime: '10:30', type: 'Normal', description: 'Math tutoring - Algebra basics. Reviewing quadratic equations.' })"
               class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
               <div class="flex justify-between items-start">
                 <h3 class="font-bold text-sm text-slate-900 dark:text-white">Alice M.</h3>
@@ -143,6 +153,7 @@ const handleSaveEntry = (entry: any) => {
           <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
             <!-- Card 1 -->
             <div
+              @click="handleEditEntry({ id: 2, subject: 'Physics Lab', hours: '4', startTime: '08:00', endTime: '12:00', type: 'Normal', description: 'Advanced Mechanics lab supervision.' })"
               class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
               <div class="flex justify-between items-start">
                 <h3 class="font-bold text-sm text-slate-900 dark:text-white">Physics Lab</h3>
@@ -181,6 +192,7 @@ const handleSaveEntry = (entry: any) => {
           <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
             <!-- Card 1 -->
             <div
+              @click="handleEditEntry({ id: 3, subject: 'Admin Work', hours: '4', startTime: '09:00', endTime: '13:00', type: 'Normal', description: 'Report card generation and parent emails.' })"
               class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
               <div class="flex justify-between items-start">
                 <h3 class="font-bold text-sm text-slate-900 dark:text-white">Admin Work</h3>
@@ -284,10 +296,7 @@ const handleSaveEntry = (entry: any) => {
     <div
       class="flex-none bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex justify-end z-20">
       <div class="flex gap-4">
-        <button
-          class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-6 bg-transparent border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-white text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <span class="truncate">Save Draft</span>
-        </button>
+
         <button
           class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-6 bg-[#0984e3] hover:bg-[#026aa7] text-white text-sm font-bold shadow-lg shadow-[#0984e3]/30 transition-all">
           <span class="truncate">Submit Week for Approval</span>
@@ -295,5 +304,6 @@ const handleSaveEntry = (entry: any) => {
       </div>
     </div>
   </div>
-  <TimesheetModal v-model="isModalOpen" :initial-date="selectedDate" @save="handleSaveEntry" />
+  <TimesheetModal v-model="isModalOpen" :initial-date="selectedDate" :initial-data="selectedEntry"
+    @save="handleSaveEntry" />
 </template>

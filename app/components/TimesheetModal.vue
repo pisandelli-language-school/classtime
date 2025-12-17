@@ -2,6 +2,7 @@
 const props = defineProps<{
   modelValue: boolean
   initialDate?: string
+  initialData?: any
 }>()
 
 const emit = defineEmits(['update:modelValue', 'save'])
@@ -20,20 +21,42 @@ const state = reactive({
   description: ''
 })
 
+watch(() => props.modelValue, (val: boolean) => {
+  if (val) {
+    if (props.initialData) {
+      // Edit mode
+      Object.assign(state, {
+        subject: props.initialData.subject,
+        hours: props.initialData.hours,
+        startTime: props.initialData.startTime,
+        endTime: props.initialData.endTime,
+        type: props.initialData.type || 'Normal',
+        description: props.initialData.description
+      })
+    } else {
+      // Create mode - reset
+      state.subject = undefined
+      state.hours = ''
+      state.startTime = ''
+      state.endTime = ''
+      state.type = 'Normal'
+      state.description = ''
+    }
+  }
+})
+
 const subjects = ['Alice M. - Math Tutoring', 'Grade 10 Biology', 'Physics Lab', 'Staff Meeting']
 const types = ['Normal', 'Reposição', 'Cancelamento', 'Aula Demonstrativa', 'Master Class']
 
 const handleSave = () => {
-  console.log('Saving entry:', { date: props.initialDate, ...state })
-  emit('save', { date: props.initialDate, ...state })
+  const entryData = {
+    date: props.initialDate,
+    ...state,
+    id: props.initialData?.id // Include ID if editing
+  }
+  console.log('Saving entry:', entryData)
+  emit('save', entryData)
   isOpen.value = false
-  // Reset state
-  state.description = ''
-  state.subject = undefined
-  state.hours = ''
-  state.startTime = ''
-  state.endTime = ''
-  state.type = 'Normal'
 }
 
 const handleClose = () => {
@@ -48,8 +71,9 @@ const handleClose = () => {
       class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all scale-100">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
         <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-          Log Time <span v-if="initialDate" class="text-slate-500 font-normal">for {{ initialDate
-            }}</span>
+          {{ initialData ? 'Edit Log' : 'Log Time' }} <span v-if="initialDate" class="text-slate-500 font-normal">for {{
+            initialDate
+          }}</span>
         </h3>
         <button class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
           @click="handleClose">
