@@ -25,7 +25,6 @@ async function main() {
       data: {
         email,
         role: Role.ROOT,
-        hourlyRate: 50.0,
         active: true,
       },
     });
