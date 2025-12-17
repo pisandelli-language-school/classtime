@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ROOT
+  MANAGER
+  TEACHER
+}
+
+model User {
+  id         String  @id @default(uuid())
+  email      String  @unique
+  name       String?
+  role       Role
+  hourlyRate Decimal @default(0.0)
+  active     Boolean @default(true)
+
+  assignments Assignment[]
+  timesheets  TimesheetPeriod[]
+  auditLogs   AuditLog[]
+}
+
+model Assignment {
+  id        String @id @default(uuid())
+  teacherId String
+  teacher   User   @relation(fields: [teacherId], references: [id])
+
+  studentId String?
+  classId   String?
+  student   Student? @relation(fields: [studentId], references: [id])
+  class     Class?   @relation(fields: [classId], references: [id])
+
+  timeEntries TimeEntry[]
+}
+
+model Student {
+  id          String       @id @default(uuid())
+  name        String
+  assignments Assignment[]
+}
+
+model Class {
+  id          String       @id @default(uuid())
+  name        String
+  assignments Assignment[]
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model TimesheetPeriod {
+  id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  month           Int
+  year            Int
+  status          TimesheetStatus @default(DRAFT)
+  rejectionReason String?
+
+  entries TimeEntry[]
+
+  @@unique([userId, month, year])
+}
+
+model TimeEntry {
+  id                String          @id @default(uuid())
+  timesheetPeriodId String
+  timesheetPeriod   TimesheetPeriod @relation(fields: [timesheetPeriodId], references: [id])
+  date              DateTime
+  duration          Decimal
+  description       String
+  assignmentId      String
+  assignment        Assignment      @relation(fields: [assignmentId], references: [id])
+
+  @@unique([timesheetPeriodId, date, assignmentId])
+}
+
+enum AuditAction {
+  SUBMIT
+  APPROVE
+  REJECT
+  LOGIN
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  actorId   String
+  actor     User        @relation(fields: [actorId], references: [id])
+  action    AuditAction
+  targetId  String?
+  timestamp DateTime    @default(now())
+  metadata  Json?
+}
