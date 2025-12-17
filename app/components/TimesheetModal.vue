@@ -49,7 +49,7 @@ const handleClose = () => {
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
         <h3 class="text-lg font-bold text-slate-900 dark:text-white">
           Log Time <span v-if="initialDate" class="text-slate-500 font-normal">for {{ initialDate
-          }}</span>
+            }}</span>
         </h3>
         <button class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
           @click="handleClose">
