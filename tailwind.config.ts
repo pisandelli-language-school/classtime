@@ -5,7 +5,7 @@ export default <Partial<Config>>{
   theme: {
     extend: {
       colors: {
-        primary: {
+        brand: {
           DEFAULT: '#0984e3',
           50: '#f1f8fe',
           100: '#e1f0fc',
