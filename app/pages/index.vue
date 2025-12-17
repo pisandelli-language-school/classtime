@@ -1,6 +1,15 @@
 <script setup lang="ts">
-const handleLogTime = () => {
-  alert('Open Log Time Modal');
+const isModalOpen = ref(false)
+const selectedDate = ref('')
+
+const handleLogTime = (date: string) => {
+  selectedDate.value = date
+  isModalOpen.value = true
+}
+
+const handleSaveEntry = (entry: any) => {
+  console.log('Entry saved:', entry)
+  // Here we will eventually call the API
 }
 </script>
 
@@ -111,7 +120,7 @@ const handleLogTime = () => {
               </div>
             </div>
 
-            <button @click="handleLogTime"
+            <button @click="handleLogTime('Mon 16')"
               class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
               <span class="material-symbols-outlined text-lg">add</span>
               <span class="text-xs font-medium">Log Time</span>
@@ -148,7 +157,7 @@ const handleLogTime = () => {
               </div>
             </div>
 
-            <button @click="handleLogTime"
+            <button @click="handleLogTime('Tue 17')"
               class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
               <span class="material-symbols-outlined text-lg">add</span>
               <span class="text-xs font-medium">Log Time</span>
@@ -186,7 +195,7 @@ const handleLogTime = () => {
               </div>
             </div>
 
-            <button @click="handleLogTime"
+            <button @click="handleLogTime('Wed 18')"
               class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
               <span class="material-symbols-outlined text-lg">add</span>
               <span class="text-xs font-medium">Log Time</span>
@@ -223,7 +232,7 @@ const handleLogTime = () => {
               </div>
             </div>
 
-            <button @click="handleLogTime"
+            <button @click="handleLogTime('Thu 19')"
               class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
               <span class="material-symbols-outlined text-lg">add</span>
               <span class="text-xs font-medium">Log Time</span>
@@ -260,7 +269,7 @@ const handleLogTime = () => {
               </div>
             </div>
 
-            <button @click="handleLogTime"
+            <button @click="handleLogTime('Fri 20')"
               class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
               <span class="material-symbols-outlined text-lg">add</span>
               <span class="text-xs font-medium">Log Time</span>
@@ -286,4 +295,5 @@ const handleLogTime = () => {
       </div>
     </div>
   </div>
+  <TimesheetModal v-model="isModalOpen" :initial-date="selectedDate" @save="handleSaveEntry" />
 </template>
