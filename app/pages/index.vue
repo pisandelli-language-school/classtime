@@ -163,6 +163,31 @@ const headerDateRange = computed(() => {
 
   return `${start.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}`
 })
+
+const getEntryTypeColor = (type?: string) => {
+  switch (type) {
+    case 'Normal':
+      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+    case 'Reposição':
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+    case 'Cancelamento':
+      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+    case 'Aula Demonstrativa':
+    case 'Master Class':
+      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+    default:
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+  }
+}
+
+const getEntryTimeRange = (entry: any) => {
+  if (!entry.date || !entry.duration) return ''
+  const start = new Date(entry.date)
+  const end = new Date(start.getTime() + Number(entry.duration) * 60 * 60 * 1000)
+
+  const format = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: 'numeric', minute: '2-digit' })
+  return `${format(start)} - ${format(end)}`
+}
 </script>
 
 <template>
@@ -174,7 +199,7 @@ const headerDateRange = computed(() => {
         <div
           class="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 pl-4 pr-1 shadow-sm">
           <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
-          }}</span>
+            }}</span>
           <div class="flex gap-1">
             <button @click="navigateWeek(-1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
@@ -224,12 +249,12 @@ const headerDateRange = computed(() => {
     </div>
 
     <!-- Timesheet Grid -->
-    <main class="overflow-x-auto overflow-y-hidden bg-background-light dark:bg-background-dark px-4 py-6 min-h-0">
+    <main class="overflow-auto bg-background-light dark:bg-background-dark px-4 py-6 min-h-0">
       <div class="h-full min-w-[1000px] mx-auto max-w-[1600px] grid grid-cols-7 gap-4">
 
-        <div v-for="day in weekDays" :key="day.toISOString()" class="flex flex-col h-full gap-2 group/col">
+        <div v-for="day in weekDays" :key="day.toISOString()" class="flex flex-col gap-2 group/col">
           <div :class="[
-            'flex flex-col gap-2 p-3 rounded-md border mr-2 transition-colors',
+            'flex flex-col gap-2 p-3 rounded-md border transition-colors',
             day.toDateString() === new Date().toDateString()
               ? 'bg-[#0984e3]/10 border-[#0984e3] dark:bg-[#0984e3]/20 dark:border-[#0984e3]'
               : 'bg-white/50 dark:bg-slate-800/50 border-transparent hover:border-slate-200 dark:hover:border-slate-700'
@@ -249,23 +274,37 @@ const headerDateRange = computed(() => {
 
           </div>
 
-          <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 pb-20 scrollbar-custom">
+          <div class="flex-1 flex flex-col gap-2 pb-20">
 
             <div v-for="entry in getEntriesForDay(day)" :key="entry.id" @click="handleEditEntry(entry)"
               class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
-              <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">{{ entry.assignment?.student?.name ||
+              <div class="flex justify-between items-start gap-2">
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white line-clamp-1 flex-1">{{
+                  entry.assignment?.student?.name ||
                   entry.assignment?.class?.name || 'Unknown' }}</h3>
                 <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{{
+                  class="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded flex-none">{{
                     entry.duration }}h</span>
               </div>
+
+              <div class="flex items-center gap-2 flex-wrap">
+                <span v-if="entry.type" :class="[
+                  'text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide',
+                  getEntryTypeColor(entry.type)
+                ]">
+                  {{ entry.type }}
+                </span>
+              </div>
+
               <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
                 {{ entry.description }}
               </div>
-              <!-- <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> 9:00 AM - 10:30 AM
-              </div> -->
+
+              <div
+                class="mt-1 flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium border-t border-slate-100 dark:border-slate-700/50 pt-2">
+                <span class="material-symbols-outlined text-[12px] opacity-70">schedule</span>
+                {{ getEntryTimeRange(entry) }}
+              </div>
             </div>
 
             <button @click="day.getDay() === 0 ? handleRequestApproval() : handleLogTime(day.toISOString())" :class="[

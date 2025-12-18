@@ -7,8 +7,8 @@ const upsertEntrySchema = z.object({
   duration: z.number().min(0).max(24),
   assignmentId: z.string().min(1),
   type: z.string().optional().default('Normal'),
-  description: z.string().optional().default(''),
-  observations: z.string().optional().default(''),
+  description: z.string().max(250).optional().default(''),
+  observations: z.string().max(250).optional().default(''),
 });
 
 import { serverSupabaseUser } from '#supabase/server';

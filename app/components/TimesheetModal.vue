@@ -199,20 +199,26 @@ const formattedDate = computed(() => {
             <div class="flex justify-between items-center mb-1.5">
               <label
                 class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Descrição</label>
-              <span class="text-[10px] text-slate-400 dark:text-slate-500">Max 250 chars</span>
+              <span class="text-[10px]"
+                :class="state.description.length >= 250 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-slate-500'">
+                {{ state.description.length }} / 250
+              </span>
             </div>
             <UTextarea v-model="state.description" placeholder="Detalhes da atividade..." :rows="3" resize
-              class="w-full" />
+              class="w-full" maxlength="250" />
           </div>
 
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <label
                 class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Observações</label>
-              <span class="text-[10px] text-slate-400 dark:text-slate-500">Max 250 chars</span>
+              <span class="text-[10px]"
+                :class="state.observations.length >= 250 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-slate-500'">
+                {{ state.observations.length }} / 250
+              </span>
             </div>
             <UTextarea v-model="state.observations" placeholder="Observações adicionais..." :rows="3" resize
-              class="w-full" />
+              class="w-full" maxlength="250" />
           </div>
         </div>
 
