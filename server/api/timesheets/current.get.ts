@@ -45,6 +45,14 @@ export default defineEventHandler(async (event) => {
     include: {
       entries: {
         orderBy: { date: 'asc' },
+        include: {
+          assignment: {
+            include: {
+              class: { select: { name: true } },
+              student: { select: { name: true } },
+            },
+          },
+        },
       },
     },
   });

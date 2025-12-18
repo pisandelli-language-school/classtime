@@ -1,6 +1,12 @@
 <script setup lang="ts">
+const { data: timesheetData, refresh } = await useFetch('/api/timesheets/current')
+
 const isModalOpen = ref(false)
 const selectedDate = ref('')
+
+const timesheet = computed(() => timesheetData.value?.timesheet)
+const assignments = computed(() => timesheetData.value?.assignments || [])
+const entries = computed(() => timesheet.value?.entries || [])
 
 const selectedEntry = ref<any>(undefined)
 
@@ -11,15 +17,69 @@ const handleLogTime = (date: string) => {
 }
 
 const handleEditEntry = (entry: any) => {
-  selectedDate.value = 'Mon 16' // In a real app efficiently derive or pass this
+  selectedDate.value = entry.date
   selectedEntry.value = entry
   isModalOpen.value = true
 }
 
-const handleSaveEntry = (entry: any) => {
-  console.log('Entry saved:', entry)
-  // Here we will eventually call the API
+const handleSaveEntry = async (entry: any) => {
+  try {
+    const payload = {
+      timesheetId: timesheet.value?.id,
+      date: new Date(entry.date).toISOString(),
+      duration: Number(entry.hours),
+      assignmentId: entry.subject?.id || entry.subject, // Handle object or ID
+      description: entry.description,
+      type: entry.type
+    }
+
+    await $fetch('/api/timesheets/entries', {
+      method: 'POST',
+      body: payload
+    })
+
+    await refresh() // Refresh data to show new entry
+  } catch (error) {
+    console.error('Failed to save entry:', error)
+    // alert('Failed to save entry') // Optional user feedback
+  }
 }
+const weekDays = computed(() => {
+  const curr = new Date()
+  const first = curr.getDate() - curr.getDay() + 1 // Monday
+  const days = []
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(curr.setDate(first + i))
+    days.push(d)
+  }
+  return days
+})
+
+const getEntriesForDay = (date: Date) => {
+  return entries.value.filter(e => {
+    const entryDate = new Date(e.date)
+    return entryDate.getDate() === date.getDate() &&
+      entryDate.getMonth() === date.getMonth() &&
+      entryDate.getFullYear() === date.getFullYear()
+  })
+}
+
+const formatDate = (date: Date) => {
+  return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
+}
+
+const formatTime = (dateStr: string) => {
+  return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+const headerDateRange = computed(() => {
+  if (!weekDays.value || weekDays.value.length < 5) return ''
+  const start = weekDays.value[0]
+  const end = weekDays.value[4]
+
+  if (!start || !end) return ''
+
+  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+})
 </script>
 
 <template>
@@ -30,8 +90,8 @@ const handleSaveEntry = (entry: any) => {
         <!-- Date Navigation -->
         <div
           class="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 pl-4 pr-1 shadow-sm">
-          <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">Oct 16 - Oct 22,
-            2023</span>
+          <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
+          }}</span>
           <div class="flex gap-1">
             <button
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
@@ -67,222 +127,45 @@ const handleSaveEntry = (entry: any) => {
     <main class="overflow-x-auto overflow-y-hidden bg-background-light dark:bg-background-dark p-6 min-h-0">
       <div class="h-full min-w-[1000px] mx-auto max-w-[1600px] grid grid-cols-5 gap-4">
 
-        <!-- Monday -->
-        <div class="flex flex-col h-full gap-4 group/col">
+        <div v-for="day in weekDays" :key="day.toISOString()" class="flex flex-col h-full gap-4 group/col">
           <div
             class="flex flex-col gap-2 p-3 rounded-md bg-white/50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
             <div class="flex justify-between items-center">
-              <span class="text-base font-bold text-slate-900 dark:text-white">Mon 16</span>
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">6h</span>
+              <span class="text-base font-bold text-slate-900 dark:text-white">{{ formatDate(day) }}</span>
+              <!-- Sum duration logic could go here -->
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {{getEntriesForDay(day).reduce((acc, e) => acc + Number(e.duration), 0)}}h
+              </span>
             </div>
             <div class="h-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full bg-primary rounded-full" style="width: 75%"></div>
+              <!-- Progress bar logic (simplified) -->
+              <div class="h-full bg-primary rounded-full"
+                :style="{ width: Math.min((getEntriesForDay(day).reduce((acc, e) => acc + Number(e.duration), 0) / 8) * 100, 100) + '%' }">
+              </div>
             </div>
           </div>
 
           <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
-            <!-- Card 1 -->
-            <div
-              @click="handleEditEntry({ id: 1, subject: 'Alice M.', hours: '1.5', startTime: '09:00', endTime: '10:30', type: 'Normal', description: 'Math tutoring - Algebra basics. Reviewing quadratic equations.' })"
+
+            <div v-for="entry in getEntriesForDay(day)" :key="entry.id" @click="handleEditEntry(entry)"
               class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
               <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Alice M.</h3>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white">{{ entry.assignment?.student?.name ||
+                  entry.assignment?.class?.name || 'Unknown' }}</h3>
                 <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">1.5h</span>
+                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{{
+                    entry.duration }}h</span>
               </div>
               <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                Math tutoring - Algebra basics. Reviewing quadratic equations.
+                {{ entry.description }}
               </div>
-              <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
+              <!-- <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
                 <span class="material-symbols-outlined text-[14px]">schedule</span> 9:00 AM - 10:30 AM
-              </div>
+              </div> -->
             </div>
 
-            <!-- Card 2 -->
-            <div
-              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
-              <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Grade 10 Biology</h3>
-                <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">2.5h</span>
-              </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                Lab preparation and grading mid-term exams.
-              </div>
-              <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> 11:00 AM - 1:30 PM
-              </div>
-            </div>
-
-            <!-- Card 3 -->
-            <div
-              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
-              <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Staff Meeting</h3>
-                <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">2h</span>
-              </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                Weekly curriculum alignment sync.
-              </div>
-              <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> 2:00 PM - 4:00 PM
-              </div>
-            </div>
-
-            <button @click="handleLogTime('Mon 16')"
-              class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
-              <span class="material-symbols-outlined text-lg">add</span>
-              <span class="text-xs font-medium">Log Time</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Tuesday -->
-        <div class="flex flex-col h-full gap-4 group/col">
-          <div
-            class="flex flex-col gap-2 p-3 rounded-md bg-white/50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
-            <div class="flex justify-between items-center">
-              <span class="text-base font-bold text-slate-900 dark:text-white">Tue 17</span>
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">7.5h</span>
-            </div>
-            <div class="h-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full bg-primary rounded-full" style="width: 90%"></div>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
-            <!-- Card 1 -->
-            <div
-              @click="handleEditEntry({ id: 2, subject: 'Physics Lab', hours: '4', startTime: '08:00', endTime: '12:00', type: 'Normal', description: 'Advanced Mechanics lab supervision.' })"
-              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
-              <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Physics Lab</h3>
-                <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">4h</span>
-              </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                Advanced Mechanics lab supervision.
-              </div>
-              <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> 8:00 AM - 12:00 PM
-              </div>
-            </div>
-
-            <button @click="handleLogTime('Tue 17')"
-              class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
-              <span class="material-symbols-outlined text-lg">add</span>
-              <span class="text-xs font-medium">Log Time</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Wednesday -->
-        <div class="flex flex-col h-full gap-4 group/col">
-          <div
-            class="flex flex-col gap-2 p-3 rounded-md bg-white/50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
-            <div class="flex justify-between items-center">
-              <span class="text-base font-bold text-slate-900 dark:text-white">Wed 18</span>
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">4h</span>
-            </div>
-            <div class="h-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <!-- Orange bar from original HTML preserved/adapted -->
-              <div class="h-full bg-orange-400 rounded-full" style="width: 50%"></div>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
-            <!-- Card 1 -->
-            <div
-              @click="handleEditEntry({ id: 3, subject: 'Admin Work', hours: '4', startTime: '09:00', endTime: '13:00', type: 'Normal', description: 'Report card generation and parent emails.' })"
-              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
-              <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Admin Work</h3>
-                <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">4h</span>
-              </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                Report card generation and parent emails.
-              </div>
-              <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> 9:00 AM - 1:00 PM
-              </div>
-            </div>
-
-            <button @click="handleLogTime('Wed 18')"
-              class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
-              <span class="material-symbols-outlined text-lg">add</span>
-              <span class="text-xs font-medium">Log Time</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Thursday -->
-        <div class="flex flex-col h-full gap-4 group/col">
-          <div
-            class="flex flex-col gap-2 p-3 rounded-md bg-white/50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
-            <div class="flex justify-between items-center">
-              <span class="text-base font-bold text-slate-900 dark:text-white">Thu 19</span>
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">8h</span>
-            </div>
-            <div class="h-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full bg-primary rounded-full" style="width: 100%"></div>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
-            <!-- Card 1 -->
-            <div
-              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
-              <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Exam Prep</h3>
-                <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">3h</span>
-              </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                Creating materials for final exams.
-              </div>
-              <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> 3:30 PM - 6:30 PM
-              </div>
-            </div>
-
-            <button @click="handleLogTime('Thu 19')"
-              class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
-              <span class="material-symbols-outlined text-lg">add</span>
-              <span class="text-xs font-medium">Log Time</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Friday -->
-        <div class="flex flex-col h-full gap-4 group/col">
-          <div
-            class="flex flex-col gap-2 p-3 rounded-md bg-white/50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
-            <div class="flex justify-between items-center">
-              <span class="text-base font-bold text-slate-900 dark:text-white">Fri 20</span>
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">6.5h</span>
-            </div>
-            <div class="h-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full bg-primary rounded-full" style="width: 80%"></div>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 pb-20 scrollbar-custom">
-            <!-- Card 1 -->
-            <div
-              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
-              <div class="flex justify-between items-start">
-                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Review</h3>
-                <span
-                  class="bg-primary/10 text-primary dark:text-primary-400 text-[10px] font-bold px-2 py-0.5 rounded-full">2.5h</span>
-              </div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                Reviewing student progress logs.
-              </div>
-              <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> 2:00 PM - 4:30 PM
-              </div>
-            </div>
-
-            <button @click="handleLogTime('Fri 20')"
-              class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all">
+            <button @click="handleLogTime(day.toISOString())"
+              class="group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 transition-all hover:cursor-pointer">
               <span class="material-symbols-outlined text-lg">add</span>
               <span class="text-xs font-medium">Log Time</span>
             </button>
@@ -305,5 +188,5 @@ const handleSaveEntry = (entry: any) => {
     </div>
   </div>
   <TimesheetModal v-model="isModalOpen" :initial-date="selectedDate" :initial-data="selectedEntry"
-    @save="handleSaveEntry" />
+    :assignments="assignments" @save="handleSaveEntry" />
 </template>

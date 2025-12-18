@@ -5,7 +5,9 @@ const upsertEntrySchema = z.object({
   date: z.string().datetime(), // ISO string from frontend
   duration: z.number().min(0).max(24),
   assignmentId: z.string().uuid(),
+  type: z.string().optional().default('Normal'),
   description: z.string().optional().default(''),
+  observations: z.string().optional().default(''),
 });
 
 import { serverSupabaseUser } from '#supabase/server';
@@ -30,8 +32,16 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const { timesheetId, date, duration, assignmentId, description } =
-    validation.data;
+  const {
+    timesheetId,
+    date,
+    duration,
+    assignmentId,
+    description,
+    type,
+    observations,
+  } = validation.data;
+  // ... (rest of file)
 
   // Verify Timesheet ownership (and implicitly existence)
   const timesheet = await prisma.timesheetPeriod.findUnique({
@@ -77,6 +87,8 @@ export default defineEventHandler(async (event) => {
     update: {
       duration,
       description,
+      type,
+      observations, // Added field
     },
     create: {
       timesheetPeriodId: timesheetId,
@@ -84,6 +96,8 @@ export default defineEventHandler(async (event) => {
       duration,
       assignmentId,
       description,
+      type,
+      observations, // Added field
     },
   });
 

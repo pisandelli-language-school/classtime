@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { reactive, computed, watch } from 'vue'
+
 const props = defineProps<{
   modelValue: boolean
   initialDate?: string
   initialData?: any
+  assignments?: { id: string; name?: string; class?: { name: string } | null; student?: { name: string } | null }[]
 }>()
 
 const emit = defineEmits(['update:modelValue', 'save'])
@@ -12,13 +15,21 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const state = reactive({
+const state = reactive<{
+  subject: string | undefined
+  startTime: string
+  endTime: string
+  type: string | undefined
+  description: string
+  observations: string
+}>({
   subject: undefined,
-  hours: '',
+  // hours: '', // Calculated automatically now
   startTime: '',
   endTime: '',
-  type: 'Normal',
-  description: ''
+  type: undefined,
+  description: '',
+  observations: ''
 })
 
 watch(() => props.modelValue, (val: boolean) => {
@@ -27,31 +38,77 @@ watch(() => props.modelValue, (val: boolean) => {
       // Edit mode
       Object.assign(state, {
         subject: props.initialData.subject,
-        hours: props.initialData.hours,
-        startTime: props.initialData.startTime,
-        endTime: props.initialData.endTime,
+        startTime: props.initialData.startTime || '09:00', // Default if missing
+        endTime: props.initialData.endTime || '10:00',
         type: props.initialData.type || 'Normal',
-        description: props.initialData.description
+        description: props.initialData.description,
+        observations: props.initialData.observations || ''
       })
     } else {
       // Create mode - reset
       state.subject = undefined
-      state.hours = ''
       state.startTime = ''
       state.endTime = ''
-      state.type = 'Normal'
+      state.type = undefined // Force selection
       state.description = ''
+      state.observations = ''
     }
+    // Reset errors
+    errors.subject = false
+    errors.startTime = false
+    errors.endTime = false
+    errors.type = false
   }
 })
 
 const subjects = ['Alice M. - Math Tutoring', 'Grade 10 Biology', 'Physics Lab', 'Staff Meeting']
 const types = ['Normal', 'Reposição', 'Cancelamento', 'Aula Demonstrativa', 'Master Class']
 
+const calculatedDuration = computed(() => {
+  if (!state.startTime || !state.endTime) return '0.0'
+
+  const startParts = state.startTime.split(':').map(Number)
+  const endParts = state.endTime.split(':').map(Number)
+
+  if (startParts.length < 2 || endParts.length < 2) return '0.0'
+
+  const startH = startParts[0] ?? 0
+  const startM = startParts[1] ?? 0
+  const endH = endParts[0] ?? 0
+  const endM = endParts[1] ?? 0
+
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+
+  let diff = endMinutes - startMinutes
+  if (diff < 0) diff += 24 * 60 // Handle overnight
+
+  return (diff / 60).toFixed(1)
+})
+
+const errors = reactive({
+  subject: false,
+  startTime: false,
+  endTime: false,
+  type: false
+})
+
+const validateForm = () => {
+  errors.subject = !state.subject
+  errors.startTime = !state.startTime
+  errors.endTime = !state.endTime
+  errors.type = !state.type
+
+  return !Object.values(errors).some(v => v)
+}
+
 const handleSave = () => {
+  if (!validateForm()) return
+
   const entryData = {
     date: props.initialDate,
     ...state,
+    hours: calculatedDuration.value, // Override calculated hours
     id: props.initialData?.id // Include ID if editing
   }
   console.log('Saving entry:', entryData)
@@ -62,6 +119,20 @@ const handleSave = () => {
 const handleClose = () => {
   isOpen.value = false
 }
+const formattedDate = computed(() => {
+  if (!props.initialDate) return ''
+  // Handle both ISO strings and potentially other valid formats
+  const date = new Date(props.initialDate)
+  // Check if date is valid
+  if (isNaN(date.getTime())) return props.initialDate
+
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+})
 </script>
 
 <template>
@@ -70,11 +141,14 @@ const handleClose = () => {
     <div
       class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all scale-100">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-        <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-          {{ initialData ? 'Edit Log' : 'Log Time' }} <span v-if="initialDate" class="text-slate-500 font-normal">for {{
-            initialDate
-          }}</span>
-        </h3>
+        <div class="flex flex-col">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+            {{ initialData ? 'Edit Log' : 'Log Time' }}
+          </h3>
+          <p v-if="initialDate" class="text-[#0984e3] font-medium text-base mt-0.5">
+            {{ formattedDate }}
+          </p>
+        </div>
         <button class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
           @click="handleClose">
           <span class="material-symbols-outlined">close</span>
@@ -87,23 +161,26 @@ const handleClose = () => {
             <div class="col-span-3">
               <label
                 class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Class
-                / Student</label>
+                / Student <span class="text-red-500">*</span></label>
               <div class="relative">
                 <select v-model="state.subject"
-                  class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:ring-slate-700 dark:text-white">
+                  :class="{ 'ring-2 ring-red-500 dark:ring-red-500 focus:ring-red-500': errors.subject, 'ring-1 ring-slate-300 dark:ring-slate-700 focus:ring-2 focus:ring-[#0984e3]': !errors.subject }"
+                  class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-inset sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:text-white transition-all">
                   <option :value="undefined" disabled>Select Class or Student...</option>
-                  <option v-for="opt in subjects" :key="opt" :value="opt" class="dark:bg-slate-900">{{ opt }}</option>
+                  <!-- Use passed assignments if available, else fallback provided for safety/mock -->
+                  <option v-for="opt in (assignments || [])" :key="opt.id" :value="opt.id" class="dark:bg-slate-900">{{
+                    opt.name || opt.class?.name || opt.student?.name }}</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                   <span class="material-symbols-outlined text-lg">expand_more</span>
                 </div>
               </div>
+              <p v-if="errors.subject" class="text-red-500 text-[10px] mt-1 font-medium">Please select an assignment</p>
             </div>
-            <div class="col-span-1">
-              <label
-                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Hours</label>
-              <UInput v-model="state.hours" placeholder="0h" class="text-center w-full" input-class="text-center"
-                size="md" />
+            <div
+              class="col-span-1 border border-slate-200 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-800 flex flex-col items-center justify-center p-2">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Duration</span>
+              <span class="text-xl font-bold text-slate-900 dark:text-white">{{ calculatedDuration }}h</span>
             </div>
           </div>
 
@@ -111,29 +188,35 @@ const handleClose = () => {
             <div>
               <label
                 class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Start
-                Time</label>
-              <UInput v-model="state.startTime" type="time" class="w-full" size="md" />
+                Time <span class="text-red-500">*</span></label>
+              <UInput v-model="state.startTime" type="time" class="w-full" size="md"
+                :class="{ 'ring-2 ring-red-500 rounded-md': errors.startTime }" />
             </div>
             <div>
               <label
                 class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">End
-                Time</label>
-              <UInput v-model="state.endTime" type="time" class="w-full" size="md" />
+                Time <span class="text-red-500">*</span></label>
+              <UInput v-model="state.endTime" type="time" class="w-full" size="md"
+                :class="{ 'ring-2 ring-red-500 rounded-md': errors.endTime }" />
             </div>
           </div>
 
           <div>
             <label
-              class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Type</label>
+              class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Type
+              <span class="text-red-500">*</span></label>
             <div class="relative">
               <select v-model="state.type"
-                class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:ring-slate-700 dark:text-white">
+                :class="{ 'ring-2 ring-red-500 dark:ring-red-500 focus:ring-red-500': errors.type, 'ring-1 ring-slate-300 dark:ring-slate-700 focus:ring-2 focus:ring-[#0984e3]': !errors.type }"
+                class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-inset sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:text-white transition-all">
+                <option :value="undefined" disabled>Select Type...</option>
                 <option v-for="opt in types" :key="opt" :value="opt" class="dark:bg-slate-900">{{ opt }}</option>
               </select>
               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                 <span class="material-symbols-outlined text-lg">expand_more</span>
               </div>
             </div>
+            <p v-if="errors.type" class="text-red-500 text-[10px] mt-1 font-medium">Please select a type</p>
           </div>
 
           <div>
@@ -143,6 +226,16 @@ const handleClose = () => {
               <span class="text-[10px] text-slate-400 dark:text-slate-500">Max 250 chars</span>
             </div>
             <UTextarea v-model="state.description" placeholder="Enter activity details..." :rows="3" resize
+              class="w-full" />
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label
+                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Observações</label>
+              <span class="text-[10px] text-slate-400 dark:text-slate-500">Max 250 chars</span>
+            </div>
+            <UTextarea v-model="state.observations" placeholder="Observações adicionais..." :rows="3" resize
               class="w-full" />
           </div>
         </div>

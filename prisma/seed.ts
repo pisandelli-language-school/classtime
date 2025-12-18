@@ -93,7 +93,7 @@ async function main() {
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  await prisma.timesheetPeriod.upsert({
+  const timesheet = await prisma.timesheetPeriod.upsert({
     where: {
       userId_month_year: {
         userId: user.id,
@@ -111,6 +111,61 @@ async function main() {
   });
 
   console.log(`Timesheet for ${month}/${year} ensured.`);
+
+  // Create mock entries for the CURRENT WEEK so they show up in UI
+  const today = new Date();
+  const currentDay = today.getDay(); // Sunday - Saturday : 0 - 6
+  const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1); // adjust when day is sunday
+  const monday = new Date(today.setDate(diff));
+  monday.setHours(9, 0, 0, 0); // 9 AM
+
+  const tuesday = new Date(monday);
+  tuesday.setDate(monday.getDate() + 1);
+
+  const wednesday = new Date(monday);
+  wednesday.setDate(monday.getDate() + 2);
+
+  // Mock Entry 1: Monday - Physics - Alice
+  await prisma.timeEntry.upsert({
+    where: {
+      timesheetPeriodId_date_assignmentId: {
+        timesheetPeriodId: timesheet.id,
+        date: monday,
+        assignmentId: 'assign_root_physics_alice',
+      },
+    },
+    update: {},
+    create: {
+      timesheetPeriodId: timesheet.id,
+      date: monday,
+      assignmentId: 'assign_root_physics_alice',
+      duration: 1.5,
+      type: 'Normal',
+      description: 'Lab Session 1: Basics',
+    },
+  });
+
+  // Mock Entry 2: Tuesday - Math - Bob
+  await prisma.timeEntry.upsert({
+    where: {
+      timesheetPeriodId_date_assignmentId: {
+        timesheetPeriodId: timesheet.id,
+        date: tuesday,
+        assignmentId: 'assign_root_math_bob',
+      },
+    },
+    update: {},
+    create: {
+      timesheetPeriodId: timesheet.id,
+      date: tuesday,
+      assignmentId: 'assign_root_math_bob',
+      duration: 2.0,
+      type: 'Normal',
+      description: 'Calculus Review',
+    },
+  });
+
+  console.log('Mock TimeEntries created for current week.');
 }
 
 main()
@@ -118,7 +173,12 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error(e);
+    console.error('SEED ERROR:', e);
+    if (e instanceof Error) {
+      console.error('Message:', e.message);
+      // @ts-ignore
+      if (e.cause) console.error('Cause:', e.cause);
+    }
     await prisma.$disconnect();
     process.exit(1);
   });

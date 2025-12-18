@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 enum Role {
@@ -78,6 +78,8 @@ model TimeEntry {
   date              DateTime
   duration          Decimal
   description       String
+  observations      String?
+  type              String          @default("Normal")
   assignmentId      String
   assignment        Assignment      @relation(fields: [assignmentId], references: [id])
 

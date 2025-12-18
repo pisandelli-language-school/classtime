@@ -9,6 +9,9 @@
     "preview": "nuxt preview",
     "postinstall": "prisma generate && nuxt prepare"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",
