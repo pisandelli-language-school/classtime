@@ -49,16 +49,52 @@ const handleRequestApproval = () => {
   alert('Request sent to manager (Placeholder)')
 }
 
+const currentReferenceDate = ref(new Date())
+
+const navigateWeek = (offset: number) => {
+  const newDate = new Date(currentReferenceDate.value)
+  newDate.setDate(newDate.getDate() + (offset * 7))
+  currentReferenceDate.value = newDate
+}
+
+const jumpToToday = () => {
+  currentReferenceDate.value = new Date()
+}
+
+const isCurrentWeek = computed(() => {
+  const today = new Date()
+  const start = weekDays.value[0]
+  const end = weekDays.value[6]
+
+  if (!start || !end) return false
+
+  return today >= start && today <= end
+})
+
+const viewTitle = computed(() => {
+  if (!weekDays.value.length) return ''
+  const start = weekDays.value[0]
+  // Return Month + Year, e.g. "December 2025"
+  return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+})
+
 const weekDays = computed(() => {
-  const curr = new Date()
-  const first = curr.getDate() - curr.getDay() + 1 // Monday
+  const curr = new Date(currentReferenceDate.value)
+  const day = curr.getDay()
+  const diff = curr.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
+  const monday = new Date(curr.setDate(diff))
+  monday.setHours(0, 0, 0, 0) // Normalize time for Monday
+
   const days = []
   for (let i = 0; i < 7; i++) {
-    const d = new Date(curr.setDate(first + i))
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    d.setHours(0, 0, 0, 0) // Normalize time for each day
     days.push(d)
   }
   return days
 })
+
 
 const getEntriesForDay = (date: Date) => {
   return entries.value.filter(e => {
@@ -98,22 +134,32 @@ const headerDateRange = computed(() => {
           <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
             }}</span>
           <div class="flex gap-1">
-            <button
+            <button @click="navigateWeek(-1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
               <span class="material-symbols-outlined text-sm">chevron_left</span>
             </button>
-            <button
+            <button @click="navigateWeek(1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
               <span class="material-symbols-outlined text-sm">chevron_right</span>
             </button>
           </div>
         </div>
 
-        <!-- Today's Date Display -->
-        <div class="hidden md:flex items-center justify-center flex-1">
-          <span class="text-lg font-bold text-slate-700 dark:text-slate-200 capitalize">
-            {{ new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) }}
-          </span>
+        <!-- Dynamic Header Center -->
+        <div class="hidden md:flex items-center justify-center flex-1 gap-4">
+          <h2 class="text-lg font-bold text-slate-700 dark:text-slate-200 capitalize">
+            {{ viewTitle }}
+          </h2>
+
+          <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-1"
+            enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
+            <button v-if="!isCurrentWeek" @click="jumpToToday"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-colors">
+              <span class="material-symbols-outlined text-sm">today</span>
+              Jump to Today
+            </button>
+          </transition>
         </div>
 
         <!-- Weekly Goal Progress -->
