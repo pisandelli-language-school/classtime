@@ -46,7 +46,7 @@ const handleSaveEntry = async (entry: any) => {
 }
 
 const handleRequestApproval = () => {
-  alert('Request sent to manager (Placeholder)')
+  alert('Solicitação enviada ao gerente (Placeholder)')
 }
 
 const currentReferenceDate = ref(new Date())
@@ -72,10 +72,11 @@ const isCurrentWeek = computed(() => {
 })
 
 const viewTitle = computed(() => {
-  if (!weekDays.value.length) return ''
+  if (!weekDays.value || !weekDays.value.length) return ''
   const start = weekDays.value[0]
-  // Return Month + Year, e.g. "December 2025"
-  return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  if (!start) return ''
+  // Return Month + Year, e.g. "Dezembro 2025"
+  return start.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 })
 
 const weekDays = computed(() => {
@@ -106,11 +107,11 @@ const getEntriesForDay = (date: Date) => {
 }
 
 const formatDate = (date: Date) => {
-  return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
+  return date.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric' })
 }
 
 const formatTime = (dateStr: string) => {
-  return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return new Date(dateStr).toLocaleTimeString('pt-BR', { hour: 'numeric', minute: '2-digit' })
 }
 const headerDateRange = computed(() => {
   if (!weekDays.value || weekDays.value.length < 7) return ''
@@ -119,7 +120,7 @@ const headerDateRange = computed(() => {
 
   if (!start || !end) return ''
 
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  return `${start.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}`
 })
 </script>
 
@@ -132,7 +133,7 @@ const headerDateRange = computed(() => {
         <div
           class="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 pl-4 pr-1 shadow-sm">
           <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
-            }}</span>
+          }}</span>
           <div class="flex gap-1">
             <button @click="navigateWeek(-1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
@@ -157,7 +158,7 @@ const headerDateRange = computed(() => {
             <button v-if="!isCurrentWeek" @click="jumpToToday"
               class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-colors">
               <span class="material-symbols-outlined text-sm">today</span>
-              Jump to Today
+              Voltar para Hoje
             </button>
           </transition>
         </div>
@@ -166,8 +167,8 @@ const headerDateRange = computed(() => {
         <div class="flex items-center gap-6 justify-end max-w-md w-full">
           <div class="flex flex-col w-full gap-2">
             <div class="flex justify-between items-end">
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Weekly
-                Goal</span>
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meta
+                Mensal</span>
               <div class="text-sm font-medium">
                 <span class="font-bold text-slate-900 dark:text-white">32h</span>
                 <span class="text-slate-400">/ 40h</span>
@@ -195,7 +196,7 @@ const headerDateRange = computed(() => {
             <div class="flex justify-between items-start mb-2">
               <div class="flex flex-col">
                 <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-0.5">{{
-                  day.toLocaleDateString('en-US', { weekday: 'short' }) }}</span>
+                  day.toLocaleDateString('pt-BR', { weekday: 'short' }) }}</span>
                 <span class="text-2xl font-bold text-slate-900 dark:text-white leading-none">{{
                   day.getDate() }}</span>
               </div>
@@ -233,7 +234,7 @@ const headerDateRange = computed(() => {
                 : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50'
             ]">
               <span class="material-symbols-outlined text-lg">{{ day.getDay() === 0 ? 'priority_high' : 'add' }}</span>
-              <span class="text-xs font-medium">{{ day.getDay() === 0 ? 'Request Approval' : 'Log Time' }}</span>
+              <span class="text-xs font-medium">{{ day.getDay() === 0 ? 'Solicitar Aprovação' : 'Lançar Horas' }}</span>
             </button>
           </div>
         </div>
@@ -248,7 +249,7 @@ const headerDateRange = computed(() => {
 
         <button
           class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-6 bg-[#0984e3] hover:bg-[#026aa7] text-white text-sm font-bold shadow-lg shadow-[#0984e3]/30 transition-all">
-          <span class="truncate">Submit Week for Approval</span>
+          <span class="truncate">Enviar Semana para Aprovação</span>
         </button>
       </div>
     </div>

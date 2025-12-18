@@ -126,7 +126,7 @@ const formattedDate = computed(() => {
   // Check if date is valid
   if (isNaN(date.getTime())) return props.initialDate
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('pt-BR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -143,7 +143,7 @@ const formattedDate = computed(() => {
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
         <div class="flex flex-col">
           <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-            {{ initialData ? 'Edit Log' : 'Log Time' }}
+            {{ initialData ? 'Editar Lançamento' : 'Lançar Horas' }}
           </h3>
           <p v-if="initialDate" class="text-[#0984e3] font-medium text-base mt-0.5">
             {{ formattedDate }}
@@ -160,13 +160,13 @@ const formattedDate = computed(() => {
           <div class="grid grid-cols-4 gap-4">
             <div class="col-span-3">
               <label
-                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Class
-                / Student <span class="text-red-500">*</span></label>
+                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Turma
+                / Aluno <span class="text-red-500">*</span></label>
               <div class="relative">
                 <select v-model="state.subject"
                   :class="{ 'ring-2 ring-red-500 dark:ring-red-500 focus:ring-red-500': errors.subject, 'ring-1 ring-slate-300 dark:ring-slate-700 focus:ring-2 focus:ring-[#0984e3]': !errors.subject }"
                   class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-inset sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:text-white transition-all">
-                  <option :value="undefined" disabled>Select Class or Student...</option>
+                  <option :value="undefined" disabled>Selecione Turma ou Aluno...</option>
                   <!-- Use passed assignments if available, else fallback provided for safety/mock -->
                   <option v-for="opt in (assignments || [])" :key="opt.id" :value="opt.id" class="dark:bg-slate-900">{{
                     opt.name || opt.class?.name || opt.student?.name }}</option>
@@ -175,11 +175,12 @@ const formattedDate = computed(() => {
                   <span class="material-symbols-outlined text-lg">expand_more</span>
                 </div>
               </div>
-              <p v-if="errors.subject" class="text-red-500 text-[10px] mt-1 font-medium">Please select an assignment</p>
+              <p v-if="errors.subject" class="text-red-500 text-[10px] mt-1 font-medium">Por favor selecione uma opção
+              </p>
             </div>
             <div
               class="col-span-1 border border-slate-200 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-800 flex flex-col items-center justify-center p-2">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Duration</span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Duração</span>
               <span class="text-xl font-bold text-slate-900 dark:text-white">{{ calculatedDuration }}h</span>
             </div>
           </div>
@@ -187,15 +188,15 @@ const formattedDate = computed(() => {
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label
-                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Start
-                Time <span class="text-red-500">*</span></label>
+                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Início
+                <span class="text-red-500">*</span></label>
               <UInput v-model="state.startTime" type="time" class="w-full" size="md"
                 :class="{ 'ring-2 ring-red-500 rounded-md': errors.startTime }" />
             </div>
             <div>
               <label
-                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">End
-                Time <span class="text-red-500">*</span></label>
+                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Fim
+                <span class="text-red-500">*</span></label>
               <UInput v-model="state.endTime" type="time" class="w-full" size="md"
                 :class="{ 'ring-2 ring-red-500 rounded-md': errors.endTime }" />
             </div>
@@ -203,29 +204,29 @@ const formattedDate = computed(() => {
 
           <div>
             <label
-              class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Type
+              class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Tipo
               <span class="text-red-500">*</span></label>
             <div class="relative">
               <select v-model="state.type"
                 :class="{ 'ring-2 ring-red-500 dark:ring-red-500 focus:ring-red-500': errors.type, 'ring-1 ring-slate-300 dark:ring-slate-700 focus:ring-2 focus:ring-[#0984e3]': !errors.type }"
                 class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-inset sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:text-white transition-all">
-                <option :value="undefined" disabled>Select Type...</option>
+                <option :value="undefined" disabled>Selecione o Tipo...</option>
                 <option v-for="opt in types" :key="opt" :value="opt" class="dark:bg-slate-900">{{ opt }}</option>
               </select>
               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                 <span class="material-symbols-outlined text-lg">expand_more</span>
               </div>
             </div>
-            <p v-if="errors.type" class="text-red-500 text-[10px] mt-1 font-medium">Please select a type</p>
+            <p v-if="errors.type" class="text-red-500 text-[10px] mt-1 font-medium">Por favor selecione um tipo</p>
           </div>
 
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <label
-                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Description</label>
+                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Descrição</label>
               <span class="text-[10px] text-slate-400 dark:text-slate-500">Max 250 chars</span>
             </div>
-            <UTextarea v-model="state.description" placeholder="Enter activity details..." :rows="3" resize
+            <UTextarea v-model="state.description" placeholder="Detalhes da atividade..." :rows="3" resize
               class="w-full" />
           </div>
 
@@ -245,11 +246,11 @@ const formattedDate = computed(() => {
           <button
             class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
             @click="handleClose">
-            Cancel
+            Cancelar
           </button>
           <button @click="handleSave"
             class="px-6 py-2 bg-[#0984e3] hover:bg-[#026aa7] text-white text-sm font-bold rounded-full shadow-lg shadow-[#0984e3]/30 transition-all">
-            Save Log
+            Salvar
           </button>
         </div>
       </div>

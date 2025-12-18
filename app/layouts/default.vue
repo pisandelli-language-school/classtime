@@ -46,11 +46,11 @@ const closeDropdown = () => {
           </NuxtLink>
           <a class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
             href="#">
-            Reports
+            Relatórios
           </a>
           <a class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
             href="#">
-            Students
+            Alunos
           </a>
         </div>
       </div>
@@ -83,13 +83,13 @@ const closeDropdown = () => {
             class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 dark:ring-slate-700 z-40 transform origin-top-right transition-all">
             <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
               <p class="text-sm text-slate-900 dark:text-white font-medium truncate">{{ userMetadata.full_name || 'User'
-              }}</p>
+                }}</p>
               <p class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ user?.email }}</p>
             </div>
             <a href="#" @click.prevent="handleLogout"
               class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#0984e3] transition-colors flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">logout</span>
-              Sign out
+              Sair
             </a>
           </div>
         </div>

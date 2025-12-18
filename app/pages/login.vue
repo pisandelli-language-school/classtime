@@ -51,7 +51,7 @@ const handleLogin = async () => {
             <img src="/logo.svg" alt="ClassTime Logo" class="w-60" />
           </div>
           <p class="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed max-w-[280px]">
-            Welcome back. Please sign in to track your teaching hours.
+            Bem-vindo de volta. Faça login para registrar suas horas de aula.
           </p>
         </div>
 
@@ -74,14 +74,14 @@ const handleLogin = async () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 fill="#EA4335"></path>
             </svg>
-            <span class="font-bold text-sm tracking-wide">{{ loading ? 'Signing in...' : 'Sign in with Google' }}</span>
+            <span class="font-bold text-sm tracking-wide">{{ loading ? 'Entrando...' : 'Entrar com Google' }}</span>
           </button>
 
           <!-- Domain Restriction Helper -->
           <div class="mt-6 flex flex-col items-center gap-2">
             <p class="text-slate-500 dark:text-slate-400 text-xs text-center font-medium">
-              Restricted to <span class="font-bold text-slate-700 dark:text-slate-200">@pisandelli.com</span> accounts
-              only.
+              Restrito apenas para contas <span
+                class="font-bold text-slate-700 dark:text-slate-200">@pisandelli.com</span>.
             </p>
           </div>
         </div>
@@ -90,7 +90,7 @@ const handleLogin = async () => {
         <div
           class="bg-slate-50 dark:bg-[#020617] border-t border-slate-100 dark:border-[#1e293b] py-4 px-6 flex items-center justify-center gap-1.5">
           <span class="material-symbols-outlined text-slate-400 dark:text-[#64748b] text-[16px]">lock</span>
-          <span class="text-xs font-semibold text-slate-400 dark:text-[#64748b] uppercase tracking-wider">Protected by
+          <span class="text-xs font-semibold text-slate-400 dark:text-[#64748b] uppercase tracking-wider">Protegido por
             Pisandelli IT</span>
         </div>
       </div>
@@ -99,9 +99,9 @@ const handleLogin = async () => {
     <!-- Simple Footer Links -->
     <footer class="absolute bottom-4 w-full text-center z-10 pointer-events-none">
       <div class="pointer-events-auto inline-flex gap-6 text-xs text-slate-400 dark:text-slate-600">
-        <a class="hover:text-[#0984e3] transition-colors" href="#">Help</a>
-        <a class="hover:text-[#0984e3] transition-colors" href="#">Privacy</a>
-        <a class="hover:text-[#0984e3] transition-colors" href="#">Terms</a>
+        <a class="hover:text-[#0984e3] transition-colors" href="#">Ajuda</a>
+        <a class="hover:text-[#0984e3] transition-colors" href="#">Privacidade</a>
+        <a class="hover:text-[#0984e3] transition-colors" href="#">Termos</a>
       </div>
     </footer>
   </div>
