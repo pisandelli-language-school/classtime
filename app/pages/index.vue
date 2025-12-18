@@ -39,10 +39,12 @@ const handleEditEntry = (entry: any) => {
   isModalOpen.value = true
 }
 
-const isSaving = ref(false)
+
 
 const handleSaveEntry = async (entry: any) => {
-  isSaving.value = true
+  const loader = useLoader()
+  loader.startLoading('Salvando...')
+
   try {
     // 1. Construct Date object with time
     let dateObj = new Date(entry.date)
@@ -73,7 +75,7 @@ const handleSaveEntry = async (entry: any) => {
     console.error('Failed to save entry:', error)
     // alert('Failed to save entry') // Optional user feedback
   } finally {
-    isSaving.value = false
+    loader.stopLoading()
   }
 }
 

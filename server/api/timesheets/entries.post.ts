@@ -90,28 +90,9 @@ export default defineEventHandler(async (event) => {
       },
     });
   } else {
-    // Create new entry (or rely on unique constraint to fail if duplicate? Or upsert by composite?)
-    // If we simply create, strict constraints might fail if exact dupe.
-    // Let's us upsert by composite key to be safe for "Add" flow on blank cells,
-    // BUT "Add" flow shouldn't reuse existing unless it's the exact same timestamp.
-    // Given we now include TIME in date, collision is unlikely unless double-click.
-
-    // Safer to use upsert with composite to avoid unique constraint errors on double-submit
-    return await prisma.timeEntry.upsert({
-      where: {
-        timesheetPeriodId_date_assignmentId: {
-          timesheetPeriodId: timesheetId,
-          date: new Date(date),
-          assignmentId: assignmentId,
-        },
-      },
-      update: {
-        duration,
-        description,
-        type,
-        observations,
-      },
-      create: {
+    // Create new entry
+    return await prisma.timeEntry.create({
+      data: {
         timesheetPeriodId: timesheetId,
         date: new Date(date),
         duration,

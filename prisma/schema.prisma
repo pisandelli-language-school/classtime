@@ -83,7 +83,7 @@ model TimeEntry {
   assignmentId      String
   assignment        Assignment      @relation(fields: [assignmentId], references: [id])
 
-  @@unique([timesheetPeriodId, date, assignmentId])
+  // Removed unique constraint to allow multiple entries per day for same assignment
 }
 
 enum AuditAction {

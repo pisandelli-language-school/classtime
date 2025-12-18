@@ -2,6 +2,7 @@
 const user = useSupabaseUser()
 const client = useSupabaseClient()
 const userMetadata = computed(() => user.value?.user_metadata || {})
+const loader = useLoader()
 
 const isDropdownOpen = ref(false)
 
@@ -99,6 +100,16 @@ const closeDropdown = () => {
     <!-- Page Content Slot Wrapper -->
     <div class="overflow-hidden relative flex flex-col min-h-0 h-full">
       <slot />
+    </div>
+
+    <!-- Global Loading Overlay -->
+    <div v-if="loader.isLoading.value"
+      class="fixed inset-0 z-[100] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center">
+      <div class="flex flex-col items-center gap-4">
+        <div class="w-12 h-12 rounded-full border-4 border-[#0984e3]/20 border-t-[#0984e3] animate-spin"></div>
+        <span class="text-sm font-medium text-slate-600 dark:text-slate-300 opacity-70 animate-pulse">{{
+          loader.loadingMessage.value }}</span>
+      </div>
     </div>
   </div>
 </template>
