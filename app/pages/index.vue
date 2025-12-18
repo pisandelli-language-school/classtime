@@ -79,6 +79,28 @@ const handleSaveEntry = async (entry: any) => {
   }
 }
 
+const handleDeleteEntry = async (id: string) => {
+  if (!confirm('Tem certeza que deseja excluir este lançamento?')) return
+
+  const loader = useLoader()
+  loader.startLoading('Excluindo...')
+
+  try {
+    await $fetch('/api/timesheets/entries', {
+      method: 'DELETE',
+      query: { id }
+    })
+
+    await refresh()
+    isModalOpen.value = false
+  } catch (error) {
+    console.error('Failed to delete entry:', error)
+    alert('Erro ao excluir lançamento. Verifique se a folha já foi enviada.')
+  } finally {
+    loader.stopLoading()
+  }
+}
+
 // ...
 
 // Update Template to bind :loading
@@ -199,7 +221,7 @@ const getEntryTimeRange = (entry: any) => {
         <div
           class="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 pl-4 pr-1 shadow-sm">
           <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
-            }}</span>
+          }}</span>
           <div class="flex gap-1">
             <button @click="navigateWeek(-1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
@@ -335,5 +357,6 @@ const getEntryTimeRange = (entry: any) => {
     </div>
   </div>
   <TimesheetModal v-model="isModalOpen" :initial-date="selectedDate" :initial-data="selectedEntry"
-    :assignments="assignments" @save="handleSaveEntry" />
+    :assignments="assignments" @save="handleSaveEntry" @delete="handleDeleteEntry" />
 </template>
+```

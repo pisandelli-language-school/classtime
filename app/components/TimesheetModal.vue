@@ -229,6 +229,12 @@ const formattedDate = computed(() => {
             @click="handleClose">
             Cancelar
           </button>
+
+          <button v-if="initialData && initialData.id" @click="$emit('delete', initialData.id)"
+            class="px-4 py-2 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors mr-auto">
+            Excluir
+          </button>
+
           <button @click="handleSave"
             class="px-6 py-2 bg-[#0984e3] hover:bg-[#026aa7] text-white text-sm font-bold rounded-full shadow-lg shadow-[#0984e3]/30 transition-all">
             Salvar
