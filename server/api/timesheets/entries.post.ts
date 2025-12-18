@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
 const upsertEntrySchema = z.object({
-  timesheetId: z.string().uuid(),
+  id: z.string().optional(),
+  timesheetId: z.string().min(1),
   date: z.string().datetime(), // ISO string from frontend
   duration: z.number().min(0).max(24),
-  assignmentId: z.string().uuid(),
+  assignmentId: z.string().min(1),
   type: z.string().optional().default('Normal'),
   description: z.string().optional().default(''),
   observations: z.string().optional().default(''),
@@ -33,6 +34,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const {
+    id,
     timesheetId,
     date,
     duration,
@@ -41,7 +43,8 @@ export default defineEventHandler(async (event) => {
     type,
     observations,
   } = validation.data;
-  // ... (rest of file)
+
+  // ... (ownership checks remain)
 
   // Verify Timesheet ownership (and implicitly existence)
   const timesheet = await prisma.timesheetPeriod.findUnique({
@@ -61,9 +64,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // RBAC: Only owner or logic to check status
-  // Ideally, only handle edits if status is DRAFT or REJECTED
   if (timesheet.user.email !== user.email) {
-    // TODO: Allow managers to edit? For now, strict ownership.
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
   }
 
@@ -74,32 +75,51 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Upsert Entry
-  // We use the composite unique key [timesheetPeriodId, date, assignmentId]
-  const entry = await prisma.timeEntry.upsert({
-    where: {
-      timesheetPeriodId_date_assignmentId: {
-        timesheetPeriodId: timesheetId,
-        date: new Date(date), // Ensure Date object
-        assignmentId: assignmentId,
+  // Handle Update vs Create based on ID
+  if (id) {
+    // Update existing entry
+    return await prisma.timeEntry.update({
+      where: { id },
+      data: {
+        date: new Date(date),
+        duration,
+        assignmentId,
+        description,
+        type,
+        observations,
       },
-    },
-    update: {
-      duration,
-      description,
-      type,
-      observations, // Added field
-    },
-    create: {
-      timesheetPeriodId: timesheetId,
-      date: new Date(date),
-      duration,
-      assignmentId,
-      description,
-      type,
-      observations, // Added field
-    },
-  });
+    });
+  } else {
+    // Create new entry (or rely on unique constraint to fail if duplicate? Or upsert by composite?)
+    // If we simply create, strict constraints might fail if exact dupe.
+    // Let's us upsert by composite key to be safe for "Add" flow on blank cells,
+    // BUT "Add" flow shouldn't reuse existing unless it's the exact same timestamp.
+    // Given we now include TIME in date, collision is unlikely unless double-click.
 
-  return entry;
+    // Safer to use upsert with composite to avoid unique constraint errors on double-submit
+    return await prisma.timeEntry.upsert({
+      where: {
+        timesheetPeriodId_date_assignmentId: {
+          timesheetPeriodId: timesheetId,
+          date: new Date(date),
+          assignmentId: assignmentId,
+        },
+      },
+      update: {
+        duration,
+        description,
+        type,
+        observations,
+      },
+      create: {
+        timesheetPeriodId: timesheetId,
+        date: new Date(date),
+        duration,
+        assignmentId,
+        description,
+        type,
+        observations,
+      },
+    });
+  }
 });

@@ -3,87 +3,28 @@ import { reactive, computed, watch } from 'vue'
 
 const props = defineProps<{
   modelValue: boolean
+  loading?: boolean
   initialDate?: string
   initialData?: any
   assignments?: { id: string; name?: string; class?: { name: string } | null; student?: { name: string } | null }[]
 }>()
 
-const emit = defineEmits(['update:modelValue', 'save'])
+const emit = defineEmits(['update:modelValue', 'save', 'close'])
 
 const isOpen = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
-const state = reactive<{
-  subject: string | undefined
-  startTime: string
-  endTime: string
-  type: string | undefined
-  description: string
-  observations: string
-}>({
-  subject: undefined,
-  // hours: '', // Calculated automatically now
-  startTime: '',
-  endTime: '',
-  type: undefined,
-  description: '',
-  observations: ''
-})
-
-watch(() => props.modelValue, (val: boolean) => {
-  if (val) {
-    if (props.initialData) {
-      // Edit mode
-      Object.assign(state, {
-        subject: props.initialData.subject,
-        startTime: props.initialData.startTime || '09:00', // Default if missing
-        endTime: props.initialData.endTime || '10:00',
-        type: props.initialData.type || 'Normal',
-        description: props.initialData.description,
-        observations: props.initialData.observations || ''
-      })
-    } else {
-      // Create mode - reset
-      state.subject = undefined
-      state.startTime = ''
-      state.endTime = ''
-      state.type = undefined // Force selection
-      state.description = ''
-      state.observations = ''
-    }
-    // Reset errors
-    errors.subject = false
-    errors.startTime = false
-    errors.endTime = false
-    errors.type = false
-  }
-})
-
-const subjects = ['Alice M. - Math Tutoring', 'Grade 10 Biology', 'Physics Lab', 'Staff Meeting']
 const types = ['Normal', 'Reposição', 'Cancelamento', 'Aula Demonstrativa', 'Master Class']
 
-const calculatedDuration = computed(() => {
-  if (!state.startTime || !state.endTime) return '0.0'
-
-  const startParts = state.startTime.split(':').map(Number)
-  const endParts = state.endTime.split(':').map(Number)
-
-  if (startParts.length < 2 || endParts.length < 2) return '0.0'
-
-  const startH = startParts[0] ?? 0
-  const startM = startParts[1] ?? 0
-  const endH = endParts[0] ?? 0
-  const endM = endParts[1] ?? 0
-
-  const startMinutes = startH * 60 + startM
-  const endMinutes = endH * 60 + endM
-
-  let diff = endMinutes - startMinutes
-  if (diff < 0) diff += 24 * 60 // Handle overnight
-
-  return (diff / 60).toFixed(1)
+const state = reactive({
+  subject: undefined as string | undefined,
+  startTime: '',
+  endTime: '',
+  type: undefined as string | undefined,
+  description: '',
+  observations: ''
 })
 
 const errors = reactive({
@@ -93,14 +34,50 @@ const errors = reactive({
   type: false
 })
 
+const calculatedDuration = computed(() => {
+  if (!state.startTime || !state.endTime) return '0.0'
+
+  const [startH = 0, startM = 0] = state.startTime.split(':').map(Number)
+  const [endH = 0, endM = 0] = state.endTime.split(':').map(Number)
+
+  const start = startH + startM / 60
+  const end = endH + endM / 60
+
+  const duration = end - start
+  return duration > 0 ? (duration).toFixed(1) : '0.0'
+})
+
 const validateForm = () => {
-  errors.subject = !state.subject
+  errors.subject = !state.subject || state.subject === ''
   errors.startTime = !state.startTime
   errors.endTime = !state.endTime
   errors.type = !state.type
 
-  return !Object.values(errors).some(v => v)
+  const hasErrors = Object.values(errors).some(v => v === true)
+  return !hasErrors
 }
+
+watch(() => props.modelValue, (val) => {
+  if (val) {
+    if (props.initialData) {
+      state.subject = props.initialData.assignmentId || props.initialData.subject // Handle both
+      state.startTime = props.initialData.startTime || '08:00'
+      state.endTime = props.initialData.endTime || '09:00'
+      state.type = props.initialData.type || 'Normal'
+      state.description = props.initialData.description || ''
+      state.observations = props.initialData.observations || ''
+    } else {
+      state.subject = undefined
+      state.startTime = '08:00'
+      state.endTime = ''
+      state.type = 'Normal'
+      state.description = ''
+      state.observations = ''
+
+      Object.keys(errors).forEach(key => errors[key as keyof typeof errors] = false)
+    }
+  }
+})
 
 const handleSave = () => {
   if (!validateForm()) return
@@ -108,22 +85,21 @@ const handleSave = () => {
   const entryData = {
     date: props.initialDate,
     ...state,
-    hours: calculatedDuration.value, // Override calculated hours
-    id: props.initialData?.id // Include ID if editing
+    hours: calculatedDuration.value,
+    id: props.initialData?.id
   }
-  console.log('Saving entry:', entryData)
-  emit('save', entryData)
+  // Immediately close modal to allow global loading overlay to take over
   isOpen.value = false
+  emit('save', entryData)
 }
 
 const handleClose = () => {
   isOpen.value = false
 }
+
 const formattedDate = computed(() => {
   if (!props.initialDate) return ''
-  // Handle both ISO strings and potentially other valid formats
   const date = new Date(props.initialDate)
-  // Check if date is valid
   if (isNaN(date.getTime())) return props.initialDate
 
   return date.toLocaleDateString('pt-BR', {
@@ -167,7 +143,6 @@ const formattedDate = computed(() => {
                   :class="{ 'ring-2 ring-red-500 dark:ring-red-500 focus:ring-red-500': errors.subject, 'ring-1 ring-slate-300 dark:ring-slate-700 focus:ring-2 focus:ring-[#0984e3]': !errors.subject }"
                   class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-inset sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:text-white transition-all">
                   <option :value="undefined" disabled>Selecione Turma ou Aluno...</option>
-                  <!-- Use passed assignments if available, else fallback provided for safety/mock -->
                   <option v-for="opt in (assignments || [])" :key="opt.id" :value="opt.id" class="dark:bg-slate-900">{{
                     opt.name || opt.class?.name || opt.student?.name }}</option>
                 </select>

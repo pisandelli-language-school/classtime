@@ -18,18 +18,47 @@ const handleLogTime = (date: string) => {
 
 const handleEditEntry = (entry: any) => {
   selectedDate.value = entry.date
-  selectedEntry.value = entry
+
+  // Create a mutable copy and populate times
+  const entryData = { ...entry }
+
+  if (entry.date) {
+    const d = new Date(entry.date)
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    entryData.startTime = `${hours}:${minutes}`
+
+    // Calculate end time
+    const endD = new Date(d.getTime() + Number(entry.duration) * 60 * 60 * 1000)
+    const endH = String(endD.getHours()).padStart(2, '0')
+    const endM = String(endD.getMinutes()).padStart(2, '0')
+    entryData.endTime = `${endH}:${endM}`
+  }
+
+  selectedEntry.value = entryData
   isModalOpen.value = true
 }
 
+const isSaving = ref(false)
+
 const handleSaveEntry = async (entry: any) => {
+  isSaving.value = true
   try {
+    // 1. Construct Date object with time
+    let dateObj = new Date(entry.date)
+    if (entry.startTime) {
+      const [hours, minutes] = entry.startTime.split(':').map(Number)
+      dateObj.setHours(hours, minutes, 0, 0)
+    }
+
     const payload = {
+      id: entry.id,
       timesheetId: timesheet.value?.id,
-      date: new Date(entry.date).toISOString(),
+      date: dateObj.toISOString(),
       duration: Number(entry.hours),
       assignmentId: entry.subject?.id || entry.subject, // Handle object or ID
       description: entry.description,
+      observations: entry.observations,
       type: entry.type
     }
 
@@ -39,11 +68,21 @@ const handleSaveEntry = async (entry: any) => {
     })
 
     await refresh() // Refresh data to show new entry
+    isModalOpen.value = false // Close modal only on success
   } catch (error) {
     console.error('Failed to save entry:', error)
     // alert('Failed to save entry') // Optional user feedback
+  } finally {
+    isSaving.value = false
   }
 }
+
+// ...
+
+// Update Template to bind :loading
+// Find where <TimesheetModal> is used
+
+
 
 const handleRequestApproval = () => {
   alert('Solicitação enviada ao gerente (Placeholder)')
