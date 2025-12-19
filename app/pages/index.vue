@@ -16,6 +16,23 @@ const handleLogTime = (date: string) => {
   isModalOpen.value = true
 }
 
+// Filter State
+const filterType = ref<string | undefined>(undefined)
+const filterSubject = ref<string | undefined>(undefined)
+const isFilterOpen = ref(false)
+
+const filteredEntries = computed(() => {
+  return entries.value.filter(entry => {
+    // Filter by Type
+    if (filterType.value && entry.type !== filterType.value) return false
+
+    // Filter by Subject (Assignment ID)
+    if (filterSubject.value && (entry.assignmentId !== filterSubject.value && entry.assignment?.id !== filterSubject.value)) return false
+
+    return true
+  })
+})
+
 const handleEditEntry = (entry: any) => {
   selectedDate.value = entry.date
 
@@ -161,7 +178,7 @@ const weekDays = computed(() => {
 
 
 const getEntriesForDay = (date: Date) => {
-  return entries.value.filter(e => {
+  return filteredEntries.value.filter(e => {
     const entryDate = new Date(e.date)
     return entryDate.getDate() === date.getDate() &&
       entryDate.getMonth() === date.getMonth() &&
@@ -207,7 +224,11 @@ const getEntryTimeRange = (entry: any) => {
   const start = new Date(entry.date)
   const end = new Date(start.getTime() + Number(entry.duration) * 60 * 60 * 1000)
 
-  const format = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: 'numeric', minute: '2-digit' })
+  const format = (d: Date) => {
+    const h = String(d.getHours()).padStart(2, '0')
+    const m = String(d.getMinutes()).padStart(2, '0')
+    return `${h}:${m}`
+  }
   return `${format(start)} - ${format(end)}`
 }
 </script>
@@ -221,7 +242,7 @@ const getEntryTimeRange = (entry: any) => {
         <div
           class="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 pl-4 pr-1 shadow-sm">
           <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
-          }}</span>
+            }}</span>
           <div class="flex gap-1">
             <button @click="navigateWeek(-1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
@@ -232,6 +253,64 @@ const getEntryTimeRange = (entry: any) => {
               <span class="material-symbols-outlined text-sm">chevron_right</span>
             </button>
           </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <!-- Filter Controls (Manual) -->
+        <div class="relative z-30">
+          <button @click="isFilterOpen = !isFilterOpen"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm cursor-pointer">
+            <span class="material-symbols-outlined text-sm">filter_list</span>
+            <span v-if="filterType || filterSubject" class="text-[#0984e3]">Filtros Ativos</span>
+            <span v-else>Filtrar</span>
+          </button>
+
+          <!-- Dropdown Panel -->
+          <div v-if="isFilterOpen"
+            class="absolute top-full left-0 mt-2 p-4 w-72 bg-white dark:bg-slate-900 shadow-xl rounded-xl border border-slate-100 dark:border-slate-800 space-y-4">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 class="font-bold text-slate-900 dark:text-white text-sm">Filtrar Lançamentos</h3>
+              <div class="flex gap-2">
+                <button v-if="filterType || filterSubject"
+                  @click="{ filterType = undefined; filterSubject = undefined }"
+                  class="text-xs text-red-500 hover:text-red-600 font-medium">
+                  Limpar
+                </button>
+                <button @click="isFilterOpen = false" class="text-xs text-slate-400 hover:text-slate-600">
+                  <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
+                <select v-model="filterType"
+                  class="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#0984e3] sm:text-sm sm:leading-6 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+                  <option :value="undefined">Todos os Tipos</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Reposição">Reposição</option>
+                  <option value="Cancelamento">Cancelamento</option>
+                  <option value="Aula Demonstrativa">Aula Demonstrativa</option>
+                  <option value="Master Class">Master Class</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Turma / Aluno</label>
+                <select v-model="filterSubject"
+                  class="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#0984e3] sm:text-sm sm:leading-6 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+                  <option :value="undefined">Todos</option>
+                  <option v-for="opt in (assignments || [])" :key="opt.id" :value="opt.id">
+                    {{ opt.class?.name || opt.student?.name || 'Sem Nome' }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Click Outside Overlay -->
+          <div v-if="isFilterOpen" @click="isFilterOpen = false" class="fixed inset-0 z-[-1]" />
         </div>
 
         <!-- Dynamic Header Center -->
@@ -302,8 +381,8 @@ const getEntryTimeRange = (entry: any) => {
               class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
               <div class="flex justify-between items-start gap-2">
                 <h3 class="font-bold text-sm text-slate-900 dark:text-white line-clamp-1 flex-1">{{
-                  entry.assignment?.student?.name ||
-                  entry.assignment?.class?.name || 'Unknown' }}</h3>
+                  entry.assignment?.class?.name ||
+                  entry.assignment?.student?.name || 'Sem Nome' }}</h3>
                 <span
                   class="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded flex-none">{{
                     entry.duration }}h</span>
