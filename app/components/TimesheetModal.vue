@@ -31,7 +31,8 @@ const errors = reactive({
   subject: false,
   startTime: false,
   endTime: false,
-  type: false
+  type: false,
+  description: false
 })
 
 const calculatedDuration = computed(() => {
@@ -52,6 +53,7 @@ const validateForm = () => {
   errors.startTime = !state.startTime
   errors.endTime = !state.endTime
   errors.type = !state.type
+  errors.description = !state.description || state.description === ''
 
   const hasErrors = Object.values(errors).some(v => v === true)
   return !hasErrors
@@ -68,9 +70,9 @@ watch(() => props.modelValue, (val) => {
       state.observations = props.initialData.observations || ''
     } else {
       state.subject = undefined
-      state.startTime = '08:00'
+      state.startTime = ''
       state.endTime = ''
-      state.type = 'Normal'
+      state.type = undefined
       state.description = ''
       state.observations = ''
 
@@ -198,14 +200,17 @@ const formattedDate = computed(() => {
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <label
-                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Descrição</label>
+                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Descrição
+                <span class="text-red-500">*</span></label>
               <span class="text-[10px]"
                 :class="state.description.length >= 250 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-slate-500'">
                 {{ state.description.length }} / 250
               </span>
             </div>
             <UTextarea v-model="state.description" placeholder="Detalhes da atividade..." :rows="3" resize
-              class="w-full" maxlength="250" />
+              class="w-full" maxlength="250" :class="{ 'ring-2 ring-red-500 rounded-md': errors.description }" />
+            <p v-if="errors.description" class="text-red-500 text-[10px] mt-1 font-medium">Por favor preencha a
+              descrição</p>
           </div>
 
           <div>
