@@ -9,7 +9,7 @@ const props = defineProps<{
   assignments?: { id: string; name?: string; class?: { name: string } | null; student?: { name: string } | null }[]
 }>()
 
-const emit = defineEmits(['update:modelValue', 'save', 'close'])
+const emit = defineEmits(['update:modelValue', 'save', 'close', 'delete'])
 
 const isOpen = computed({
   get: () => props.modelValue,
