@@ -22,3 +22,5 @@ logs
 .env
 .env.*
 !.env.example
+
+classtime-481322*.json
