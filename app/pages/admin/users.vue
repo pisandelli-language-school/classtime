@@ -27,7 +27,7 @@ const filteredUsers = computed(() => {
     users = users.filter((u: any) => u.role === selectedRole.value)
   }
 
-  return users
+  return users.sort((a: any, b: any) => a.name.localeCompare(b.name))
 })
 
 
