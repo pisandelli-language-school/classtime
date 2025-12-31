@@ -8,9 +8,10 @@ const selectedRole = ref<string | null>(null) // null = All
 
 // Filter Users
 const filteredUsers = computed(() => {
-  if (!usersData.value?.success || !usersData.value?.users) return []
+  const data = usersData.value
+  if (!data || !data.success || !('users' in data)) return []
 
-  let users = usersData.value.users
+  let users = data.users
 
   // Search Filter
   if (search.value) {
@@ -54,6 +55,16 @@ const roleOptions = [
 
 
 
+
+const errorMessage = computed(() => {
+  if (error.value) return error.value.message;
+  // Check if usersData has an error property (manual type narrowing)
+  if (usersData.value && typeof usersData.value === 'object' && 'error' in usersData.value) {
+    return (usersData.value as any).error; // Cast because TS doesn't narrow perfectly on the union here
+  }
+  return null;
+});
+
 </script>
 
 <template>
@@ -68,7 +79,7 @@ const roleOptions = [
       <UButton to="/" variant="ghost" icon="i-heroicons-arrow-left-20-solid">Voltar ao Timesheet</UButton>
     </div>
 
-    <UCard :ui="{ body: { padding: 'p-0 sm:p-0' } }">
+    <UCard :ui="{ body: { padding: 'p-0 sm:p-0' } as any }">
       <template #header>
         <div class="flex flex-col sm:flex-row gap-4 justify-between items-center">
           <div class="flex items-center gap-4 w-full sm:w-auto">
@@ -105,8 +116,9 @@ const roleOptions = [
         <!-- Error State -->
         <div v-else-if="error || (usersData && !usersData.success)" class="p-8 text-center text-red-500">
           <p class="font-bold">Erro ao carregar usuários</p>
-          <p class="text-sm">{{ error?.message || usersData?.error }}</p>
-          <UButton @click="refresh" variant="soft" color="red" class="mt-4" size="sm">Tentar Novamente</UButton>
+          <p class="text-sm">{{ errorMessage }}</p>
+          <UButton @click="() => refresh()" variant="soft" color="error" class="mt-4" size="sm">Tentar Novamente
+          </UButton>
         </div>
 
         <!-- Empty State -->
@@ -138,7 +150,7 @@ const roleOptions = [
                   <!-- User Info -->
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
-                      <UAvatar :src="user.avatar" :alt="user.name" size="sm" />
+                      <UAvatar :src="user.avatar || undefined" :alt="user.name" size="sm" />
                       <div class="flex flex-col">
                         <span class="font-medium text-slate-900 dark:text-white">{{ user.name }}</span>
                         <span class="text-xs text-slate-500 sm:hidden">{{ user.email }}</span>
@@ -153,16 +165,12 @@ const roleOptions = [
 
                   <!-- Role -->
                   <td class="px-6 py-4">
-                    <div class="flex flex-col items-start gap-1">
-                      <UBadge :color="user.role === 'Admin' ? 'purple' : user.role === 'Manager' ? 'blue' : 'green'"
-                        variant="subtle" size="xs">
+                    <div class="flex items-start">
+                      <UBadge :color="user.role === 'Admin' ? 'neutral' : user.role === 'Manager' ? 'info' : 'success'"
+                        variant="soft" size="md">
                         {{ user.role === 'Admin' ? 'Administrador' : user.role === 'Manager' ? 'Gerente' : 'Professor'
                         }}
                       </UBadge>
-                      <span v-if="user.role !== 'Teacher' && user.orgDepartment"
-                        class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-                        {{ user.orgDepartment }}
-                      </span>
                     </div>
                   </td>
 
@@ -184,7 +192,7 @@ const roleOptions = [
 
                   <!-- Actions -->
                   <td class="px-6 py-4 text-right">
-                    <UButton v-if="user.role === 'Teacher'" @click="openEditModal(user)" color="white" variant="solid"
+                    <UButton v-if="user.role === 'Teacher'" @click="openEditModal(user)" color="neutral" variant="solid"
                       size="xs" icon="i-heroicons-pencil-square-20-solid">
                       Editar
                     </UButton>

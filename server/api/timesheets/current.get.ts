@@ -1,4 +1,5 @@
 import { serverSupabaseUser } from '#supabase/server';
+import { safeQuery } from '../../utils/db';
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event);
@@ -6,9 +7,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
   }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email },
-  });
+  const dbUser = await safeQuery(() =>
+    prisma.user.findUnique({
+      where: { email: user.email },
+    })
+  );
 
   if (!dbUser) {
     throw createError({ statusCode: 403, statusMessage: 'User not found' });
@@ -27,44 +30,48 @@ export default defineEventHandler(async (event) => {
   }
 
   // Upsert timesheet: Create DRAFT if it doesn't exist for this period
-  const timesheet = await prisma.timesheetPeriod.upsert({
-    where: {
-      userId_month_year: {
+  const timesheet = await safeQuery(() =>
+    prisma.timesheetPeriod.upsert({
+      where: {
+        userId_month_year: {
+          userId: dbUser.id,
+          month,
+          year,
+        },
+      },
+      update: {}, // No updates if exists
+      create: {
         userId: dbUser.id,
         month,
         year,
+        status: 'DRAFT',
       },
-    },
-    update: {}, // No updates if exists
-    create: {
-      userId: dbUser.id,
-      month,
-      year,
-      status: 'DRAFT',
-    },
-    include: {
-      entries: {
-        orderBy: { date: 'asc' },
-        include: {
-          assignment: {
-            include: {
-              class: { select: { name: true } },
-              student: { select: { name: true } },
+      include: {
+        entries: {
+          orderBy: { date: 'asc' },
+          include: {
+            assignment: {
+              include: {
+                class: { select: { name: true } },
+                student: { select: { name: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    })
+  );
 
   // Fetch user's assignments
-  const assignments = await prisma.assignment.findMany({
-    where: { teacherId: dbUser.id },
-    include: {
-      class: { select: { name: true } },
-      student: { select: { name: true } },
-    },
-  });
+  const assignments = await safeQuery(() =>
+    prisma.assignment.findMany({
+      where: { teacherId: dbUser.id },
+      include: {
+        class: { select: { name: true } },
+        student: { select: { name: true } },
+      },
+    })
+  );
 
   return { timesheet, assignments, userRole: dbUser.role };
 });

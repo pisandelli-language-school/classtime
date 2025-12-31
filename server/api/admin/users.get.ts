@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import path from 'path';
+import { safeQuery } from '../../utils/db';
 
 export default defineEventHandler(async (event) => {
   // 1. Google Auth & Directory API
@@ -29,15 +30,17 @@ export default defineEventHandler(async (event) => {
     const googleUsers = googleRes.data.users || [];
 
     // 3. Fetch Local DB Users (Billing Data)
-    const dbUsers = await prisma.user.findMany({
-      include: {
-        assignments: {
-          include: {
-            class: true,
+    const dbUsers = await safeQuery(() =>
+      prisma.user.findMany({
+        include: {
+          assignments: {
+            include: {
+              class: true,
+            },
           },
         },
-      },
-    });
+      })
+    );
 
     // 4. Merge Data
     const mergedUsers = googleUsers.map((gUser) => {
@@ -66,7 +69,8 @@ export default defineEventHandler(async (event) => {
       } else if (gUser.organizations && gUser.organizations.length > 0) {
         // Find primary or first organization
         const org =
-          gUser.organizations.find((o) => o.primary) || gUser.organizations[0];
+          gUser.organizations.find((o: any) => o.primary) ||
+          gUser.organizations[0];
         orgTitle = org.title || '';
 
         // Map Title to Role
@@ -89,17 +93,17 @@ export default defineEventHandler(async (event) => {
       }
 
       return {
-        id: gUser.id, // Google ID
+        id: gUser.id!, // Google ID should always exist
         dbId: dbUser?.id, // Local DB ID (if exists)
-        name: gUser.name?.fullName,
-        email: gUser.primaryEmail,
+        name: gUser.name?.fullName || gUser.primaryEmail || 'Sem Nome',
+        email: gUser.primaryEmail!,
         avatar: gUser.thumbnailPhotoUrl,
 
         // Role & Org Info
         role: role,
         orgTitle: orgTitle,
         orgDepartment:
-          gUser.organizations?.find((o) => o.primary)?.description ||
+          gUser.organizations?.find((o: any) => o.primary)?.description ||
           gUser.organizations?.[0]?.description,
 
         // Local Billing Data
