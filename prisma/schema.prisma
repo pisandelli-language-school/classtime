@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 enum Role {
@@ -47,6 +47,10 @@ model Student {
 model Class {
   id          String       @id @default(uuid())
   name        String
+  totalHours  Decimal?     @default(0)
+  weeklyHours Decimal?     @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
   assignments Assignment[]
 }
 
