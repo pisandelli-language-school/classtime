@@ -50,7 +50,8 @@ const roleOptions = [
   { label: 'Todos', value: null },
   { label: 'Professores', value: 'Teacher' },
   { label: 'Gerentes', value: 'Manager' },
-  { label: 'Admins', value: 'Admin' }
+  { label: 'Admins', value: 'Admin' },
+  { label: 'Staff', value: 'Staff' }
 ]
 
 
@@ -166,9 +167,11 @@ const errorMessage = computed(() => {
                   <!-- Role -->
                   <td class="px-6 py-4">
                     <div class="flex items-start">
-                      <UBadge :color="user.role === 'Admin' ? 'neutral' : user.role === 'Manager' ? 'info' : 'success'"
+                      <UBadge
+                        :color="user.role === 'Admin' ? 'neutral' : user.role === 'Manager' ? 'info' : user.role === 'Staff' ? 'warning' : 'success'"
                         variant="soft" size="md">
-                        {{ user.role === 'Admin' ? 'Administrador' : user.role === 'Manager' ? 'Gerente' : 'Professor'
+                        {{ user.role === 'Admin' ? 'Administrador' : user.role === 'Manager' ? 'Gerente' : user.role ===
+                          'Staff' ? 'Staff' : 'Professor'
                         }}
                       </UBadge>
                     </div>
@@ -207,7 +210,7 @@ const errorMessage = computed(() => {
     </UCard>
 
     <!-- Modal Placeholder -->
-    <!-- <TeacherEditModal v-model="isEditModalOpen" :user="selectedUser" @refresh="refresh" /> -->
+    <TeacherEditModal v-if="isEditModalOpen" v-model="isEditModalOpen" :user="selectedUser" @refresh="refresh" />
 
   </div>
 </template>

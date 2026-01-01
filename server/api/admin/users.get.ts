@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
 import path from 'path';
-import { safeQuery } from '../../utils/db';
 
 export default defineEventHandler(async (event) => {
   // 1. Google Auth & Directory API
@@ -59,38 +58,26 @@ export default defineEventHandler(async (event) => {
         });
       }
 
-      // Determine Role from Google Data (Organization Title)
-      // Fallback to 'Teacher' if not specified
-      let role = 'Teacher';
-      let orgTitle = '';
+      // Determine Role using Custom Fields
+      // Logic: Admin > Manager > Teacher > Staff
+      let role = 'Staff'; // Default fallback
+      const customFields = (gUser as any).customSchemas?.Custom_Fields || {};
 
       if (gUser.isAdmin) {
         role = 'Admin';
-      } else if (gUser.organizations && gUser.organizations.length > 0) {
-        // Find primary or first organization
-        const org =
-          gUser.organizations.find((o: any) => o.primary) ||
-          gUser.organizations[0];
-        orgTitle = org.title || '';
-
-        // Map Title to Role
-        if (
-          orgTitle.toLowerCase().includes('gerente') ||
-          orgTitle.toLowerCase().includes('manager')
-        ) {
-          role = 'Manager';
-        }
-        // Admin overrides everything, but if not admin and title says admin?
-        // Let's stick to GWS isAdmin for 'Admin' role in our app for now, or use the title mapping as requested.
-        // User said: "se o usuário for admin, Role = Admin" -> gUser.isAdmin
-        // "se org.title for 'Gerente' Role = Gerente"
-        // "se org.title for 'Teacher' Role = Teacher"
-
-        // Refined Logic based on User Request:
-        if (gUser.isAdmin) role = 'Admin';
-        else if (orgTitle.toLowerCase().includes('gerente')) role = 'Manager';
-        else role = 'Teacher'; // Default
+      } else if (
+        customFields.manager === true ||
+        customFields.manager === 'true'
+      ) {
+        role = 'Manager';
+      } else if (
+        customFields.teacher === true ||
+        customFields.teacher === 'true'
+      ) {
+        role = 'Teacher';
       }
+
+      const orgTitle = gUser.organizations?.[0]?.title || '';
 
       return {
         id: gUser.id!, // Google ID should always exist
