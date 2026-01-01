@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data: usersData, pending, error, refresh } = await useFetch('/api/admin/users')
+const { data: usersData, pending, error, refresh } = useFetch('/api/admin/users', { lazy: true })
 
 const search = ref('')
 const selectedRole = ref<string | null>(null) // null = All

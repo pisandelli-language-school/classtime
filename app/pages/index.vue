@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data: timesheetData, refresh } = await useFetch('/api/timesheets/current')
+const { data: timesheetData, refresh, pending } = useFetch('/api/timesheets/current', { lazy: true })
 
 const isModalOpen = ref(false)
 const selectedDate = ref('')
@@ -234,7 +234,12 @@ const getEntryTimeRange = (entry: any) => {
 </script>
 
 <template>
-  <div class="h-full grid grid-rows-[auto_1fr_auto] min-h-0">
+  <div class="h-full grid grid-rows-[auto_1fr_auto] min-h-0 relative">
+    <!-- Loading Overlay -->
+    <div v-if="pending"
+      class="absolute inset-0 bg-white/50 dark:bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm">
+      <UIcon name="i-heroicons-arrow-path" class="animate-spin text-4xl text-[#0984e3]" />
+    </div>
     <!-- Secondary Header / Controls -->
     <div class="flex-none border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
       <div class="max-w-[1600px] mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4">
