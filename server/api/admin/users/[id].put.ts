@@ -14,7 +14,15 @@ export default defineEventHandler(async (event) => {
     process.cwd(),
     'classtime-481322-e6e3f2bf7f96.json'
   );
-  const subject = process.env.ROOT_USER_EMAIL || 'admin@yourdomain.com';
+
+  const subject = process.env.ROOT_USER_EMAIL;
+  if (!subject) {
+    throw createError({
+      statusCode: 500,
+      statusMessage:
+        'Server configuration error: ROOT_USER_EMAIL is not defined in environment variables.',
+    });
+  }
 
   const auth = new google.auth.GoogleAuth({
     keyFile: keyFilePath,

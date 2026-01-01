@@ -8,7 +8,10 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const email = process.env.ROOT_USER_EMAIL || 'pedro@pisandelli.com';
+  const email = process.env.ROOT_USER_EMAIL;
+  if (!email) {
+    throw new Error('ROOT_USER_EMAIL environment variable is required.');
+  }
   const user = await prisma.user.findUnique({
     where: { email },
     include: {
