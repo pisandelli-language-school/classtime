@@ -111,7 +111,25 @@ export default defineEventHandler(async (event) => {
   // Fetch target user's assignments
   const assignments = await safeQuery(() =>
     prisma.assignment.findMany({
-      where: { teacherId: targetUserId },
+      where: {
+        teacherId: targetUserId,
+        OR: [
+          {
+            class: {
+              contracts: {
+                some: { status: 'ACTIVE' },
+              },
+            },
+          },
+          {
+            student: {
+              contracts: {
+                some: { status: 'ACTIVE' },
+              },
+            },
+          },
+        ],
+      },
       include: {
         class: { select: { name: true } },
         student: { select: { name: true } },

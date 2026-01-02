@@ -135,6 +135,7 @@ const errorMessage = computed(() => {
                   <th class="px-6 py-3">Função</th>
                   <th class="px-6 py-3 hidden md:table-cell">Valor Hora</th>
                   <th class="px-6 py-3 hidden lg:table-cell">Horas Previstas (Mês)</th>
+                  <th class="px-6 py-3 hidden xl:table-cell">Custo Mensal (Previsto)</th>
                   <th class="px-6 py-3 text-right">Ações</th>
                 </tr>
               </thead>
@@ -173,7 +174,7 @@ const errorMessage = computed(() => {
 
                   <!-- Rates -->
                   <td class="px-6 py-4 hidden md:table-cell">
-                    <span v-if="user.role === 'Teacher'" class="font-medium text-slate-900 dark:text-white">
+                    <span v-if="user.isTeacher" class="font-medium text-slate-900 dark:text-white">
                       {{ formatCurrency(user.hourlyRate) }}
                     </span>
                     <span v-else class="text-slate-300">-</span>
@@ -181,15 +182,23 @@ const errorMessage = computed(() => {
 
                   <!-- Hours -->
                   <td class="px-6 py-4 hidden lg:table-cell">
-                    <span v-if="user.role === 'Teacher'" class="font-medium">
+                    <span v-if="user.isTeacher" class="font-medium">
                       {{ user.monthlyExpectedHours }}h
+                    </span>
+                    <span v-else class="text-slate-300">-</span>
+                  </td>
+
+                  <!-- Monthly Cost -->
+                  <td class="px-6 py-4 hidden xl:table-cell">
+                    <span v-if="user.isTeacher" class="font-mono text-slate-600 dark:text-slate-400">
+                      {{ formatCurrency((user.hourlyRate || 0) * (user.monthlyExpectedHours || 0)) }}
                     </span>
                     <span v-else class="text-slate-300">-</span>
                   </td>
 
                   <!-- Actions -->
                   <td class="px-6 py-4 text-right">
-                    <UButton v-if="user.role === 'Teacher'" @click="openEditModal(user)" color="neutral" variant="solid"
+                    <UButton v-if="user.isTeacher" @click="openEditModal(user)" color="neutral" variant="solid"
                       size="xs" icon="i-heroicons-pencil-square-20-solid">
                       Editar
                     </UButton>
