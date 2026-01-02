@@ -14,12 +14,12 @@ const isOpen = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-const { data, pending, refresh } = useFetch(() => props.timesheetId ? `/api/timesheets/${props.timesheetId}/audit` : null, {
+const { data, pending, refresh } = useFetch(() => `/api/timesheets/${props.timesheetId}/audit`, {
   immediate: false,
-  watch: [() => props.timesheetId, isOpen],
+  watch: false,
 })
 
-watch(() => props.timesheetId, () => {
+watch([() => props.timesheetId, isOpen], () => {
   if (isOpen.value && props.timesheetId) refresh()
 })
 
@@ -120,7 +120,7 @@ const getActionIcon = (action: string) => {
                     class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex justify-between items-start mb-1">
                       <span class="font-bold text-xs text-slate-900 dark:text-white">{{ getActionLabel(log.action)
-                        }}</span>
+                      }}</span>
                       <span class="text-[10px] text-slate-400">
                         {{ format(new Date(log.timestamp), "dd/MM HH:mm", { locale: ptBR }) }}
                       </span>
