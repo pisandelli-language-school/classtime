@@ -1,17 +1,20 @@
 <script setup lang="ts">
-const { data: usersData, pending, error, refresh } = useFetch('/api/admin/users', { lazy: true })
+const usersStore = useUsersStore()
+const { users: usersData, isLoading: pending, error } = storeToRefs(usersStore)
+const { fetchUsers: refresh } = usersStore
+
+// Initial Load
+onMounted(() => {
+  usersStore.fetchUsers() // default is lazy/cached
+})
 
 const search = ref('')
 const selectedRole = ref<string | null>(null) // null = All
 
-
-
 // Filter Users
 const filteredUsers = computed(() => {
-  const data = usersData.value
-  if (!data || !data.success || !('users' in data)) return []
-
-  let users = data.users
+  // Store returns array directly in users.value
+  let users = usersData.value || []
 
   // Search Filter
   if (search.value) {
@@ -29,8 +32,6 @@ const filteredUsers = computed(() => {
 
   return users.sort((a: any, b: any) => a.name.localeCompare(b.name))
 })
-
-
 
 const formatCurrency = (value: number | null) => {
   if (value === null || value === undefined) return '-'
@@ -54,15 +55,8 @@ const roleOptions = [
   { label: 'Staff', value: 'Staff' }
 ]
 
-
-
-
 const errorMessage = computed(() => {
-  if (error.value) return error.value.message;
-  // Check if usersData has an error property (manual type narrowing)
-  if (usersData.value && typeof usersData.value === 'object' && 'error' in usersData.value) {
-    return (usersData.value as any).error; // Cast because TS doesn't narrow perfectly on the union here
-  }
+  if (error.value) return error.value;
   return null;
 });
 
@@ -115,10 +109,10 @@ const errorMessage = computed(() => {
         </div>
 
         <!-- Error State -->
-        <div v-else-if="error || (usersData && !usersData.success)" class="p-8 text-center text-red-500">
+        <div v-else-if="error" class="p-8 text-center text-red-500">
           <p class="font-bold">Erro ao carregar usuários</p>
           <p class="text-sm">{{ errorMessage }}</p>
-          <UButton @click="() => refresh()" variant="soft" color="error" class="mt-4" size="sm">Tentar Novamente
+          <UButton @click="() => refresh(true)" variant="soft" color="error" class="mt-4" size="sm">Tentar Novamente
           </UButton>
         </div>
 
@@ -210,7 +204,7 @@ const errorMessage = computed(() => {
     </UCard>
 
     <!-- Modal Placeholder -->
-    <TeacherEditModal v-if="isEditModalOpen" v-model="isEditModalOpen" :user="selectedUser" @refresh="refresh" />
+    <TeacherEditModal v-if="isEditModalOpen" v-model="isEditModalOpen" :user="selectedUser" @refresh="refresh(true)" />
 
   </div>
 </template>

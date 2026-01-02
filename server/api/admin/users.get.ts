@@ -42,7 +42,12 @@ export default defineEventHandler(async (event) => {
         include: {
           assignments: {
             include: {
-              class: true,
+              class: {
+                include: { contracts: { where: { status: 'ACTIVE' } } },
+              },
+              student: {
+                include: { contracts: { where: { status: 'ACTIVE' } } },
+              },
             },
           },
         },
@@ -52,17 +57,35 @@ export default defineEventHandler(async (event) => {
     // 4. Merge Data
     const mergedUsers = googleUsers.map((gUser) => {
       // Find matching DB user by email
-      const dbUser = dbUsers.find((u) => u.email === gUser.primaryEmail);
+      // Find matching DB user by email
+      const dbUser = dbUsers?.find(
+        (u) => u.email.toLowerCase() === gUser.primaryEmail?.toLowerCase()
+      );
 
       // Calculate Monthly Expected Hours from Assignments
-      // Logic: Sum of (Class Weekly Hours * 4) for all assigned classes
-      // Note: This is a simplification. Real world might need 4.33 or specific month logic.
+      // Logic: Sum of (Weekly Hours * 4) for all assigned classes/students
+      // Priority: Active Contract > Legacy Class Field
       let monthlyExpectedHours = 0;
       if (dbUser?.assignments) {
         dbUser.assignments.forEach((a) => {
-          if (a.class && a.class.weeklyHours) {
-            monthlyExpectedHours += Number(a.class.weeklyHours) * 4;
+          let weeklyHours = 0;
+
+          if (a.class) {
+            // Check Class Contract
+            if (a.class.contracts && a.class.contracts.length > 0) {
+              weeklyHours = Number(a.class.contracts[0].weeklyHours);
+            } else {
+              // Fallback to legacy field
+              weeklyHours = Number(a.class.weeklyHours || 0);
+            }
+          } else if (a.student) {
+            // Check Student Contract (Private Classes)
+            if (a.student.contracts && a.student.contracts.length > 0) {
+              weeklyHours = Number(a.student.contracts[0].weeklyHours);
+            }
           }
+
+          monthlyExpectedHours += weeklyHours * 4;
         });
       }
 
@@ -96,6 +119,8 @@ export default defineEventHandler(async (event) => {
 
         // Role & Org Info
         role: role,
+        isTeacher:
+          customFields.teacher === true || customFields.teacher === 'true',
         orgTitle: orgTitle,
         orgDepartment:
           gUser.organizations?.find((o: any) => o.primary)?.description ||

@@ -42,16 +42,45 @@ model Student {
   id          String       @id @default(uuid())
   name        String
   assignments Assignment[]
+  contracts   Contract[]
 }
 
 model Class {
-  id          String       @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  totalHours  Decimal?     @default(0)
-  weeklyHours Decimal?     @default(0)
+  // Legacy fields (can be removed later or kept for backwards compat)
+  totalHours  Decimal?  @default(0)
+  weeklyHours Decimal?  @default(0)
   startDate   DateTime?
   endDate     DateTime?
+
   assignments Assignment[]
+  contracts   Contract[]
+}
+
+enum ContractStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model Contract {
+  id String @id @default(uuid())
+
+  // Relations (Polymorphic-ish: one must be set)
+  classId   String?
+  class     Class?   @relation(fields: [classId], references: [id])
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id])
+
+  // Contract Details
+  totalHours  Decimal // e.g., 40h package
+  weeklyHours Decimal // e.g., 2h/week
+  startDate   DateTime
+  endDate     DateTime? // Predicted or Fixed
+
+  status    ContractStatus @default(ACTIVE) // ACTIVE, ARCHIVED
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 }
 
 enum TimesheetStatus {
