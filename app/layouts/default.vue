@@ -25,6 +25,17 @@ const handleImageError = (event: Event) => {
 const closeDropdown = () => {
   isDropdownOpen.value = false
 }
+
+// Fetch user context for Role Based Access Control in Navbar
+const { data: timesheetData } = useFetch('/api/timesheets/current', {
+  lazy: true,
+  pick: ['userRole']
+})
+
+const canViewAdmin = computed(() => {
+  const role = (timesheetData.value as any)?.userRole
+  return role === 'ROOT' || role === 'MANAGER'
+})
 </script>
 
 <template>
@@ -39,20 +50,26 @@ const closeDropdown = () => {
           <img src="/logo.svg" alt="ClassTime Logo" class="w-40" />
         </NuxtLink>
 
+
         <!-- Main Nav -->
         <div class="hidden md:flex items-center gap-6 ml-8">
-          <NuxtLink to="/" class="text-sm font-medium hover:text-primary transition-colors text-primary"
+          <NuxtLink to="/"
+            class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
             active-class="text-primary">
             Timesheet
           </NuxtLink>
-          <a class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
-            href="#">
-            Relatórios
-          </a>
-          <a class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
-            href="#">
-            Alunos
-          </a>
+          <template v-if="canViewAdmin">
+            <NuxtLink to="/admin/contracts"
+              class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
+              active-class="text-primary">
+              Contratos
+            </NuxtLink>
+            <NuxtLink to="/admin/users"
+              class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
+              active-class="text-primary">
+              Usuários
+            </NuxtLink>
+          </template>
         </div>
       </div>
 
@@ -79,7 +96,8 @@ const closeDropdown = () => {
 
           <!-- Dropdown Menu -->
           <div v-if="isDropdownOpen" @click.self="closeDropdown" class="fixed inset-0 z-30 cursor-default"
-            aria-hidden="true"></div>
+            aria-hidden="true">
+          </div>
           <div v-show="isDropdownOpen"
             class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 dark:ring-slate-700 z-40 transform origin-top-right transition-all">
             <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
