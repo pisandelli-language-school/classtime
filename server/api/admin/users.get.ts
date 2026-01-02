@@ -139,6 +139,35 @@ export default defineEventHandler(async (event) => {
     // Since we default to Teacher, basically everyone is shown, which is likely what they want (excluding maybe service accounts/bots if any).
     // But let's apply the logic if needed.
 
+    // 5. Auto-Heal: Update names for "Sincronizado" users
+    // run in background to not block response
+    (async () => {
+      const usersToUpdate = mergedUsers.filter(
+        (u) =>
+          u.dbId &&
+          u.name &&
+          u.name !== 'Sem Nome' &&
+          dbUsers?.find((dbU) => dbU.id === u.dbId)?.name ===
+            'Usuário (Sincronizado)'
+      );
+
+      if (usersToUpdate.length > 0) {
+        console.log(
+          `[AutoHeal] Updating ${usersToUpdate.length} user names...`
+        );
+        for (const u of usersToUpdate) {
+          try {
+            await prisma.user.update({
+              where: { id: u.dbId },
+              data: { name: u.name },
+            });
+          } catch (err) {
+            console.error(`[AutoHeal] Failed to update user ${u.email}`, err);
+          }
+        }
+      }
+    })();
+
     return {
       success: true,
       users: mergedUsers,

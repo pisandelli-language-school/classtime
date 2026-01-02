@@ -18,6 +18,8 @@ export default defineEventHandler(async (event) => {
       update: {
         // Update role if it's the root user trying to regain access, otherwise keep existing
         role: isRoot ? Role.ROOT : undefined,
+        // Always update name from Supabase metadata if available
+        name: user.user_metadata?.full_name || undefined,
       },
       create: {
         email: user.email,
