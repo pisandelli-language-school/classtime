@@ -27,14 +27,16 @@ const closeDropdown = () => {
 }
 
 // Fetch user context for Role Based Access Control in Navbar
+// Fetch user context for Role Based Access Control in Navbar
 const { data: timesheetData } = useFetch('/api/timesheets/current', {
   lazy: true,
-  pick: ['userRole']
+  pick: ['userRole'],
+  watch: [user]
 })
 
 const canViewAdmin = computed(() => {
   const role = (timesheetData.value as any)?.userRole
-  return role === 'ROOT' || role === 'MANAGER'
+  return ['ROOT', 'MANAGER', 'ADMIN'].includes(role)
 })
 </script>
 
@@ -43,7 +45,7 @@ const canViewAdmin = computed(() => {
     class="h-screen w-full grid grid-rows-[auto_1fr] bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
     <!-- Header -->
     <header
-      class="flex-none flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 py-3 bg-white dark:bg-slate-900 z-20">
+      class="flex-none flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 py-3 bg-white dark:bg-slate-900 z-50">
       <div class="flex items-center gap-4">
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center justify-center">
