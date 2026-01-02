@@ -35,7 +35,7 @@ export const useUsersStore = defineStore('users', () => {
   };
 
   const teachers = computed(() => {
-    return users.value.filter((u) => u.isTeacher && u.dbId);
+    return users.value.filter((u) => u.isTeacher);
   });
 
   // Helpful for looking up a single user without refetching

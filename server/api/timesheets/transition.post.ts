@@ -1,4 +1,4 @@
-import { TimesheetStatus, AuditAction, Role, Prisma } from '@prisma/client';
+import { TimesheetStatus, Role, Prisma } from '@prisma/client';
 import { serverSupabaseUser } from '#supabase/server';
 
 export default defineEventHandler(async (event) => {
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
   }
 
   let nextStatus: TimesheetStatus;
-  let auditAction: AuditAction;
+  let auditAction: 'SUBMIT' | 'APPROVE' | 'REJECT';
 
   switch (action) {
     case 'SUBMIT':
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
         });
       }
       nextStatus = TimesheetStatus.SUBMITTED;
-      auditAction = AuditAction.SUBMIT;
+      auditAction = 'SUBMIT';
       break;
 
     case 'APPROVE':
@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
         });
       }
       nextStatus = TimesheetStatus.APPROVED;
-      auditAction = AuditAction.APPROVE;
+      auditAction = 'APPROVE';
       break;
 
     case 'REJECT':
@@ -109,7 +109,7 @@ export default defineEventHandler(async (event) => {
         });
       }
       nextStatus = TimesheetStatus.REJECTED;
-      auditAction = AuditAction.REJECT;
+      auditAction = 'REJECT';
       break;
 
     default:

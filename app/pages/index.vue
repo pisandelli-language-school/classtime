@@ -1,5 +1,27 @@
 <script setup lang="ts">
-const { data: timesheetData, refresh, pending } = useFetch('/api/timesheets/current', { lazy: true })
+const usersStore = useUsersStore()
+const { teachers } = storeToRefs(usersStore)
+
+const selectedTeacherContext = ref<string | undefined>(undefined)
+
+const { data: timesheetData, refresh, pending } = useFetch('/api/timesheets/current', {
+  lazy: true,
+  query: {
+    teacherEmail: selectedTeacherContext
+  }
+})
+
+const canImpersonate = computed(() => {
+  const role = (timesheetData.value as any)?.userRole
+  return role === 'ROOT' || role === 'MANAGER'
+})
+
+// Fetch teachers if admin
+watch(canImpersonate, (isAllowed) => {
+  if (isAllowed) {
+    usersStore.fetchUsers()
+  }
+}, { immediate: true })
 
 const isModalOpen = ref(false)
 const selectedDate = ref('')
@@ -7,6 +29,9 @@ const selectedDate = ref('')
 const timesheet = computed(() => timesheetData.value?.timesheet)
 const assignments = computed(() => timesheetData.value?.assignments || [])
 const entries = computed(() => timesheet.value?.entries || [])
+
+const hasAssignments = computed(() => assignments.value.length > 0)
+const showAdminPlaceholder = computed(() => canImpersonate.value && !selectedTeacherContext.value && !hasAssignments.value)
 
 const selectedEntry = ref<any>(undefined)
 
@@ -243,11 +268,25 @@ const getEntryTimeRange = (entry: any) => {
     <!-- Secondary Header / Controls -->
     <div class="flex-none border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
       <div class="max-w-[1600px] mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4">
-        <!-- Date Navigation -->
-        <div
+        <!-- View Context Selector (Admin Only) -->
+        <div v-if="canImpersonate" class="w-full sm:w-64 relative z-40">
+          <select v-model="selectedTeacherContext"
+            class="appearance-none block w-full rounded-full border-0 py-1.5 pl-4 pr-10 text-slate-900 font-bold shadow-sm ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 bg-white dark:bg-slate-800 dark:ring-slate-700 dark:text-white transition-all cursor-pointer">
+            <option :value="undefined">Minha Visão</option>
+            <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.email">
+              Ver: {{ teacher.name }}
+            </option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+            <span class="material-symbols-outlined text-lg">visibility</span>
+          </div>
+        </div>
+
+        <!-- Date Navigation (Hide on Admin Placeholder) -->
+        <div v-if="!showAdminPlaceholder"
           class="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 pl-4 pr-1 shadow-sm">
           <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
-            }}</span>
+          }}</span>
           <div class="flex gap-1">
             <button @click="navigateWeek(-1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
@@ -260,9 +299,8 @@ const getEntryTimeRange = (entry: any) => {
           </div>
         </div>
 
-        <!-- Filter Controls -->
-        <!-- Filter Controls (Manual) -->
-        <div class="relative z-30">
+        <!-- Filter Controls (Hide on Admin Placeholder) -->
+        <div v-if="!showAdminPlaceholder" class="relative z-30">
           <button @click="isFilterOpen = !isFilterOpen"
             class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm cursor-pointer">
             <span class="material-symbols-outlined text-sm">filter_list</span>
@@ -318,8 +356,8 @@ const getEntryTimeRange = (entry: any) => {
           <div v-if="isFilterOpen" @click="isFilterOpen = false" class="fixed inset-0 z-[-1]" />
         </div>
 
-        <!-- Dynamic Header Center -->
-        <div class="hidden md:flex items-center justify-center flex-1 gap-4">
+        <!-- Dynamic Header Center (Hide on Admin Placeholder) -->
+        <div v-if="!showAdminPlaceholder" class="hidden md:flex items-center justify-center flex-1 gap-4">
           <h2 class="text-lg font-bold text-slate-700 dark:text-slate-200 capitalize">
             {{ viewTitle }}
           </h2>
@@ -335,8 +373,8 @@ const getEntryTimeRange = (entry: any) => {
           </transition>
         </div>
 
-        <!-- Weekly Goal Progress -->
-        <div class="flex items-center gap-6 justify-end max-w-md w-full">
+        <!-- Weekly Goal Progress (Hide on Admin Placeholder) -->
+        <div v-if="!showAdminPlaceholder" class="flex items-center gap-6 justify-end max-w-md w-full">
           <div class="flex flex-col w-full gap-2">
             <div class="flex justify-between items-end">
               <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meta
@@ -355,8 +393,30 @@ const getEntryTimeRange = (entry: any) => {
     </div>
 
     <!-- Timesheet Grid -->
-    <main class="overflow-auto bg-background-light dark:bg-background-dark px-4 py-6 min-h-0">
-      <div class="h-full min-w-[1000px] mx-auto max-w-[1600px] grid grid-cols-7 gap-4">
+    <main class="overflow-auto bg-background-light dark:bg-background-dark px-4 py-6 min-h-0 flex flex-col">
+
+      <!-- Admin Placeholder View -->
+      <div v-if="showAdminPlaceholder"
+        class="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-70">
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 p-6 rounded-full mb-6">
+          <span
+            class="material-symbols-outlined text-6xl text-indigo-500 dark:text-indigo-400">supervisor_account</span>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">Visão Administrativa</h2>
+        <p class="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-8">
+          Selecione um professor no menu acima para visualizar a folha de pontos, gerenciar lançamentos e aprovar horas.
+        </p>
+
+        <!-- Optional: Helpful Tip or Illustration could go here -->
+        <div
+          class="flex gap-2 items-center text-xs text-indigo-500 font-medium bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2 rounded-full">
+          <span class="material-symbols-outlined text-sm">info</span>
+          <span>Você está vendo isso pois não possui turmas atribuídas.</span>
+        </div>
+      </div>
+
+      <!-- Standard Grid -->
+      <div v-else class="h-full min-w-[1000px] mx-auto max-w-[1600px] grid grid-cols-7 gap-4">
 
         <div v-for="day in weekDays" :key="day.toISOString()" class="flex flex-col gap-2 group/col">
           <div :class="[
@@ -424,12 +484,11 @@ const getEntryTimeRange = (entry: any) => {
             </button>
           </div>
         </div>
-
       </div>
     </main>
 
     <!-- Sticky Footer -->
-    <div
+    <div v-if="!showAdminPlaceholder"
       class="flex-none bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex justify-end z-20">
       <div class="flex gap-4">
 
