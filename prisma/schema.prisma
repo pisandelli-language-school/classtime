@@ -124,6 +124,9 @@ enum AuditAction {
   APPROVE
   REJECT
   LOGIN
+  CREATE_ENTRY
+  UPDATE_ENTRY
+  DELETE_ENTRY
 }
 
 model AuditLog {

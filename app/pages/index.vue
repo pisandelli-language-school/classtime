@@ -24,6 +24,7 @@ watch(canImpersonate, (isAllowed) => {
 }, { immediate: true })
 
 const isModalOpen = ref(false)
+const isAuditDrawerOpen = ref(false)
 const selectedDate = ref('')
 
 const timesheet = computed(() => timesheetData.value?.timesheet)
@@ -259,34 +260,59 @@ const getEntryTimeRange = (entry: any) => {
 </script>
 
 <template>
-  <div class="h-full grid grid-rows-[auto_1fr_auto] min-h-0 relative">
+  <div class="h-full flex flex-col min-h-0 relative">
     <!-- Loading Overlay -->
     <div v-if="pending"
       class="absolute inset-0 bg-white/50 dark:bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm">
       <UIcon name="i-heroicons-arrow-path" class="animate-spin text-4xl text-[#0984e3]" />
     </div>
-    <!-- Secondary Header / Controls -->
-    <div class="flex-none border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-      <div class="max-w-[1600px] mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4">
-        <!-- View Context Selector (Admin Only) -->
-        <div v-if="canImpersonate" class="w-full sm:w-64 relative z-40">
-          <select v-model="selectedTeacherContext"
-            class="appearance-none block w-full rounded-full border-0 py-1.5 pl-4 pr-10 text-slate-900 font-bold shadow-sm ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 bg-white dark:bg-slate-800 dark:ring-slate-700 dark:text-white transition-all cursor-pointer">
-            <option :value="undefined">Minha Visão</option>
-            <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.email">
-              Ver: {{ teacher.name }}
-            </option>
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-            <span class="material-symbols-outlined text-lg">visibility</span>
+
+    <!-- Admin Toolbar -->
+    <div v-if="canImpersonate" class="flex-none bg-indigo-950 border-b border-indigo-900 z-40 relative">
+      <div class="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-4 px-4 py-2">
+
+        <!-- Context Selector -->
+        <div class="flex items-center gap-3">
+          <div class="w-64 relative">
+            <select v-model="selectedTeacherContext"
+              class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-white bg-indigo-900/50 shadow-sm ring-1 ring-inset ring-indigo-700 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all cursor-pointer font-medium hover:bg-indigo-800">
+              <option :value="undefined">Minha Visão</option>
+              <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.email">
+                Ver: {{ teacher.name }}
+              </option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-indigo-300">
+              <span class="material-symbols-outlined text-sm">visibility</span>
+            </div>
+          </div>
+
+          <div v-if="selectedTeacherContext"
+            class="flex items-center gap-1.5 text-xs text-indigo-200 bg-indigo-800 px-3 py-1.5 rounded-full border border-indigo-700/50 shadow-sm">
+            <span class="material-symbols-outlined text-[16px]">info</span>
+            <span class="font-medium">Visualizando como <strong class="text-white">{{teachers.find(t => t.email ===
+              selectedTeacherContext)?.name}}</strong></span>
           </div>
         </div>
+
+        <!-- History Button -->
+        <button v-if="selectedTeacherContext" @click="() => { isAuditDrawerOpen = true; }"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-indigo-900/50 hover:bg-indigo-800 border border-indigo-700 text-xs font-medium text-indigo-100 hover:text-white transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-sm">history</span>
+          <span>Histórico</span>
+        </button>
+
+      </div>
+    </div>
+    <!-- Secondary Header / Controls -->
+    <div class="flex-none border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+      <div class="max-w-[1600px] mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-4">
+
 
         <!-- Date Navigation (Hide on Admin Placeholder) -->
         <div v-if="!showAdminPlaceholder"
           class="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 pl-4 pr-1 shadow-sm">
           <span class="text-sm font-bold whitespace-nowrap text-slate-700 dark:text-slate-200">{{ headerDateRange
-          }}</span>
+            }}</span>
           <div class="flex gap-1">
             <button @click="navigateWeek(-1)"
               class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400">
@@ -301,6 +327,8 @@ const getEntryTimeRange = (entry: any) => {
 
         <!-- Filter Controls (Hide on Admin Placeholder) -->
         <div v-if="!showAdminPlaceholder" class="relative z-30">
+
+
           <button @click="isFilterOpen = !isFilterOpen"
             class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm cursor-pointer">
             <span class="material-symbols-outlined text-sm">filter_list</span>
@@ -388,12 +416,14 @@ const getEntryTimeRange = (entry: any) => {
               <div class="h-full bg-green-500 rounded-full" style="width: 80%"></div>
             </div>
           </div>
+
+
         </div>
       </div>
     </div>
 
     <!-- Timesheet Grid -->
-    <main class="overflow-auto bg-background-light dark:bg-background-dark px-4 py-6 min-h-0 flex flex-col">
+    <main class="flex-1 overflow-auto bg-background-light dark:bg-background-dark min-h-0 flex flex-col">
 
       <!-- Admin Placeholder View -->
       <div v-if="showAdminPlaceholder"
@@ -416,7 +446,7 @@ const getEntryTimeRange = (entry: any) => {
       </div>
 
       <!-- Standard Grid -->
-      <div v-else class="h-full min-w-[1000px] mx-auto max-w-[1600px] grid grid-cols-7 gap-4">
+      <div v-else class="h-full w-full max-w-[1600px] mx-auto grid grid-cols-7 gap-4 px-4 py-6">
 
         <div v-for="day in weekDays" :key="day.toISOString()" class="flex flex-col gap-2 group/col">
           <div :class="[
@@ -501,5 +531,7 @@ const getEntryTimeRange = (entry: any) => {
   </div>
   <TimesheetModal v-model="isModalOpen" :initial-date="selectedDate" :initial-data="selectedEntry"
     :assignments="assignments" @save="handleSaveEntry" @delete="handleDeleteEntry" />
+
+  <AuditLogDrawer v-model="isAuditDrawerOpen" :timesheet-id="timesheet?.id" />
 </template>
 ```

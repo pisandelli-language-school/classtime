@@ -27,6 +27,15 @@ export default defineEventHandler(async (event) => {
 
   const { id } = validation.data;
 
+  // Fetch acting user (dbUser)
+  const dbUser = await prisma.user.findUnique({
+    where: { email: user.email },
+  });
+
+  if (!dbUser) {
+    throw createError({ statusCode: 403, statusMessage: 'User not found' });
+  }
+
   // Fetch the entry to verify ownership and timesheet status
   const entry = await prisma.timeEntry.findUnique({
     where: { id },
@@ -34,7 +43,7 @@ export default defineEventHandler(async (event) => {
       timesheetPeriod: {
         include: {
           user: {
-            select: { email: true },
+            select: { id: true, email: true },
           },
         },
       },
@@ -48,8 +57,12 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Check ownership
-  if (entry.timesheetPeriod.user.email !== user.email) {
+  const timesheet = entry.timesheetPeriod;
+  const isOwner = timesheet.user.id === dbUser.id;
+  const isAdmin = dbUser.role === 'ROOT' || dbUser.role === 'MANAGER';
+
+  // Check ownership/permission
+  if (!isOwner && !isAdmin) {
     throw createError({
       statusCode: 403,
       statusMessage: 'Forbidden',
@@ -57,7 +70,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Check timesheet status
-  if (['SUBMITTED', 'APPROVED'].includes(entry.timesheetPeriod.status)) {
+  if (['SUBMITTED', 'APPROVED'].includes(timesheet.status)) {
     throw createError({
       statusCode: 400,
       statusMessage:
@@ -65,9 +78,32 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Delete the entry
-  await prisma.timeEntry.delete({
-    where: { id },
+  // Delete the entry with Audit
+  await prisma.$transaction(async (tx) => {
+    await tx.timeEntry.delete({
+      where: { id },
+    });
+
+    if (!isOwner) {
+      await tx.auditLog.create({
+        data: {
+          actorId: dbUser.id,
+          // @ts-ignore
+          action: 'DELETE_ENTRY',
+          targetId: id, // ID of deleted entry
+          metadata: {
+            timesheetId: timesheet.id,
+            ownerId: timesheet.userId,
+            description: `Admin deleted time entry for ${entry.date}`,
+            deletedEntrySnapshot: {
+              description: entry.description,
+              duration: entry.duration,
+              assignmentId: entry.assignmentId,
+            },
+          },
+        },
+      });
+    }
   });
 
   return { success: true };
