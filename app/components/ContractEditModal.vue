@@ -152,6 +152,9 @@ const onSubmit = async () => {
       toast.add({ title: 'Sucesso', description: 'Contrato atualizado.', color: 'success' })
     }
 
+    // Refresh Users Store to update calculated hours
+    await usersStore.fetchUsers(true)
+
     emit('refresh')
     isOpen.value = false
 
@@ -171,6 +174,8 @@ const handleDelete = async () => {
       method: 'DELETE'
     })
     toast.add({ title: 'Sucesso', description: 'Contrato excluído.', color: 'success' })
+    // Refresh Users Store to update calculated hours
+    await usersStore.fetchUsers(true)
     emit('refresh')
     isOpen.value = false
   } catch (error: any) {
