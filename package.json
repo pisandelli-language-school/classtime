@@ -13,27 +13,27 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.1.0",
-    "@prisma/client": "^7.1.0",
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.2.0",
     "date-fns": "^4.1.0",
     "googleapis": "^169.0.0",
     "nuxt": "^4.2.2",
     "pg": "^8.16.3",
     "pinia": "^3.0.4",
-    "vue": "^3.5.25",
+    "vue": "^3.5.26",
     "vue-router": "^4.6.4",
-    "zod": "^4.2.0"
+    "zod": "^4.3.4"
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
-    "@iconify-json/lucide": "^1.2.81",
-    "@nuxt/ui": "^4.2.1",
+    "@iconify-json/lucide": "^1.2.82",
+    "@nuxt/ui": "^4.3.0",
     "@nuxtjs/supabase": "^2.0.3",
     "@pinia/nuxt": "^0.11.3",
     "@prisma/nuxt": "latest",
     "@types/pg": "^8.16.0",
     "dotenv": "^17.2.3",
-    "prisma": "^7.1.0",
-    "tsx": "^4.19.3"
+    "prisma": "^7.2.0",
+    "tsx": "^4.21.0"
   }
 }
