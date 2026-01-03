@@ -98,9 +98,12 @@ export default defineEventHandler(async (event) => {
           include: {
             assignment: {
               include: {
-                class: { select: { name: true } },
+                class: { select: { name: true, students: true } },
                 student: { select: { name: true } },
               },
+            },
+            attendees: {
+              select: { id: true, name: true },
             },
           },
         },
@@ -131,7 +134,7 @@ export default defineEventHandler(async (event) => {
         ],
       },
       include: {
-        class: { select: { name: true } },
+        class: { select: { name: true, students: true } },
         student: { select: { name: true } },
       },
     })

@@ -39,11 +39,12 @@ model Assignment {
 }
 
 model Student {
-  id          String       @id @default(uuid())
-  name        String
-  assignments Assignment[]
-  contracts   Contract[]
-  classes     Class[]
+  id                  String       @id @default(uuid())
+  name                String
+  assignments         Assignment[]
+  contracts           Contract[]
+  classes             Class[]
+  attendedTimeEntries TimeEntry[]
 }
 
 model Class {
@@ -119,6 +120,7 @@ model TimeEntry {
   assignment        Assignment      @relation(fields: [assignmentId], references: [id])
 
   // Removed unique constraint to allow multiple entries per day for same assignment
+  attendees Student[]
 }
 
 enum AuditAction {

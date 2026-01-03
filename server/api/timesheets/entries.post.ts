@@ -9,6 +9,7 @@ const upsertEntrySchema = z.object({
   type: z.string().optional().default('Normal'),
   description: z.string().max(250).optional().default(''),
   observations: z.string().max(250).optional().default(''),
+  attendeeIds: z.array(z.string()).optional(),
 });
 
 import { serverSupabaseUser } from '#supabase/server';
@@ -42,9 +43,8 @@ export default defineEventHandler(async (event) => {
     description,
     type,
     observations,
+    attendeeIds,
   } = validation.data;
-
-  // ... (ownership checks remain)
 
   // Fetch acting user (dbUser)
   const dbUser = await prisma.user.findUnique({
@@ -81,13 +81,6 @@ export default defineEventHandler(async (event) => {
   }
 
   if (['SUBMITTED', 'APPROVED'].includes(timesheet.status)) {
-    // Admins might want to edit submitted timesheets?
-    // Usually yes, but let's keep restriction for now or allow Admin override?
-    // User didn't specify, best to keep "Unlock" workflow, but let's allow Admin force-edit if needed.
-    // For now, adhere to status rules unless logic changes.
-    // Wait, if I am Admin correcting a Submitted timesheet, I probably should be able to.
-    // Let's relax this for Admins? No, let's keep it safe: Status must be DRAFT or REJECTED.
-    // If it is Submitted, Admin should Reject it first.
     throw createError({
       statusCode: 400,
       statusMessage: 'Cannot edit submitted or approved timesheets',
@@ -99,6 +92,8 @@ export default defineEventHandler(async (event) => {
     let result;
     let actionType = 'CREATE_ENTRY';
 
+    const attendeesConnect = attendeeIds?.map((id) => ({ id })) || [];
+
     if (id) {
       // Update
       actionType = 'UPDATE_ENTRY';
@@ -107,23 +102,29 @@ export default defineEventHandler(async (event) => {
         data: {
           date: new Date(date),
           duration,
-          assignmentId,
+          assignment: { connect: { id: assignmentId } },
           description,
           type,
           observations,
+          attendees: {
+            set: attendeesConnect,
+          },
         },
       });
     } else {
       // Create
       result = await tx.timeEntry.create({
         data: {
-          timesheetPeriodId: timesheetId,
+          timesheetPeriod: { connect: { id: timesheetId } },
           date: new Date(date),
           duration,
-          assignmentId,
+          assignment: { connect: { id: assignmentId } },
           description,
           type,
           observations,
+          attendees: {
+            connect: attendeesConnect,
+          },
         },
       });
     }

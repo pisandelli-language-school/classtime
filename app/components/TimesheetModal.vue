@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reactive, computed, watch } from 'vue'
+import { reactive, computed, watch, ref } from 'vue'
 
 const props = defineProps<{
   modelValue: boolean
   loading?: boolean
   initialDate?: string
   initialData?: any
-  assignments?: { id: string; name?: string; class?: { name: string } | null; student?: { name: string } | null }[]
+  assignments?: { id: string; name?: string; class?: { name: string; students?: { id: string; name: string }[] } | null; student?: { name: string } | null }[]
 }>()
 
 const emit = defineEmits(['update:modelValue', 'save', 'close', 'delete'])
@@ -16,7 +16,8 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const types = ['Normal', 'Reposição', 'Cancelamento', 'Aula Demonstrativa', 'Master Class']
+const types = ['Normal', 'Reposição', 'Falta', 'Aula Demonstrativa', 'Master Class']
+const activeTab = ref<'info' | 'attendance'>('info')
 
 const state = reactive({
   subject: undefined as string | undefined,
@@ -24,7 +25,8 @@ const state = reactive({
   endTime: '',
   type: undefined as string | undefined,
   description: '',
-  observations: ''
+  observations: '',
+  attendeeIds: [] as string[]
 })
 
 const errors = reactive({
@@ -32,7 +34,8 @@ const errors = reactive({
   startTime: false,
   endTime: false,
   type: false,
-  description: false
+  description: false,
+  attendance: false
 })
 
 const calculatedDuration = computed(() => {
@@ -48,6 +51,20 @@ const calculatedDuration = computed(() => {
   return duration > 0 ? (duration).toFixed(1) : '0.0'
 })
 
+// Helper to get students for current subject
+const currentAssignment = computed(() => {
+  return props.assignments?.find(a => a.id === state.subject)
+})
+
+const availableStudents = computed(() => {
+  return currentAssignment.value?.class?.students || []
+})
+
+// Determine if we should show the attendance tab (only if there are students)
+const showAttendanceTab = computed(() => {
+  return availableStudents.value.length > 0
+})
+
 const validateForm = () => {
   errors.subject = !state.subject || state.subject === ''
   errors.startTime = !state.startTime
@@ -55,19 +72,30 @@ const validateForm = () => {
   errors.type = !state.type
   errors.description = !state.description || state.description === ''
 
+  // Attendance Validation:
+  // If Type is NOT 'Falta' AND there are students available, at least one must be present
+  if (state.type !== 'Falta' && availableStudents.value.length > 0 && state.attendeeIds.length === 0) {
+    errors.attendance = true
+  } else {
+    errors.attendance = false
+  }
+
   const hasErrors = Object.values(errors).some(v => v === true)
   return !hasErrors
 }
 
 watch(() => props.modelValue, (val) => {
   if (val) {
+    activeTab.value = 'info' // Reset tab
     if (props.initialData) {
-      state.subject = props.initialData.assignmentId || props.initialData.subject // Handle both
+      state.subject = props.initialData.assignmentId || props.initialData.subject
       state.startTime = props.initialData.startTime || '08:00'
       state.endTime = props.initialData.endTime || '09:00'
-      state.type = props.initialData.type || 'Normal'
+      state.type = props.initialData.type === 'Cancelamento' ? 'Falta' : (props.initialData.type || 'Normal')
       state.description = props.initialData.description || ''
       state.observations = props.initialData.observations || ''
+      // Map initial attendees if available (we need to ensure backend sends them in initialData)
+      state.attendeeIds = props.initialData.attendees?.map((a: any) => a.id) || []
     } else {
       state.subject = undefined
       state.startTime = ''
@@ -75,6 +103,7 @@ watch(() => props.modelValue, (val) => {
       state.type = undefined
       state.description = ''
       state.observations = ''
+      state.attendeeIds = []
 
       Object.keys(errors).forEach(key => errors[key as keyof typeof errors] = false)
     }
@@ -90,7 +119,7 @@ const handleSave = () => {
     hours: calculatedDuration.value,
     id: props.initialData?.id
   }
-  // Immediately close modal to allow global loading overlay to take over
+  // Immediately close modal
   isOpen.value = false
   emit('save', entryData)
 }
@@ -98,6 +127,21 @@ const handleSave = () => {
 const handleClose = () => {
   isOpen.value = false
 }
+
+const toggleAttendance = (studentId: string) => {
+  if (state.type === 'Falta') return // Readonly if Falta? Or just ignored? User said readonly.
+
+  const idx = state.attendeeIds.indexOf(studentId)
+  if (idx > -1) {
+    state.attendeeIds.splice(idx, 1)
+  } else {
+    state.attendeeIds.push(studentId)
+  }
+}
+
+// Watch Type to disable attendance if Falta (optional, maybe clear it? Or keep checked but greyed out?)
+// User said: "Se marcarmos Cancelamento, a nossa lista de presença fica readonly".
+// Implies we just disable toggle. I won't clear it automatically in case they switch back.
 
 const formattedDate = computed(() => {
   if (!props.initialDate) return ''
@@ -133,8 +177,24 @@ const formattedDate = computed(() => {
         </button>
       </div>
 
+      <!-- Tabs Header -->
+      <div class="flex border-b border-slate-100 dark:border-slate-800">
+        <button v-for="tab in ['info', 'attendance']" :key="tab"
+          @click="showAttendanceTab || tab === 'info' ? activeTab = tab as any : null"
+          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative" :class="[
+            activeTab === tab ? 'text-[#0984e3]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
+            !showAttendanceTab && tab === 'attendance' ? 'opacity-50 cursor-not-allowed' : ''
+          ]">
+          {{ tab === 'info' ? 'Informações' : 'Presença' }}
+          <span v-if="activeTab === tab" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
+          <span v-if="tab === 'attendance' && errors.attendance"
+            class="absolute top-2 right-4 w-2 h-2 rounded-full bg-red-500"></span>
+        </button>
+      </div>
+
       <div class="p-6 space-y-4">
-        <div class="space-y-4">
+        <!-- Info Tab -->
+        <div v-show="activeTab === 'info'" class="space-y-4">
           <div class="grid grid-cols-4 gap-4">
             <div class="col-span-3">
               <label
@@ -198,6 +258,7 @@ const formattedDate = computed(() => {
           </div>
 
           <div>
+            <!-- Description and Observations fields (unchanged structure) -->
             <div class="flex justify-between items-center mb-1.5">
               <label
                 class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Descrição
@@ -224,6 +285,50 @@ const formattedDate = computed(() => {
             </div>
             <UTextarea v-model="state.observations" placeholder="Observações adicionais..." :rows="3" resize
               class="w-full" maxlength="250" />
+          </div>
+        </div>
+
+        <!-- Attendance Tab -->
+        <div v-show="activeTab === 'attendance'" class="space-y-4">
+          <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
+            <div class="flex justify-between items-center mb-4">
+              <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">Lista de Presença</h4>
+              <span v-if="state.type === 'Falta'"
+                class="text-xs font-medium text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                FALTA (Apenas Leitura)
+              </span>
+            </div>
+
+            <div v-if="availableStudents.length === 0" class="text-center py-8 text-slate-500 text-sm">
+              Nenhum aluno cadastrado nesta turma.
+            </div>
+
+            <div v-else class="space-y-2">
+              <div v-for="student in availableStudents" :key="student.id" @click="toggleAttendance(student.id)"
+                class="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer select-none"
+                :class="[
+                  state.attendeeIds.includes(student.id)
+                    ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+                    : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500',
+                  state.type === 'Falta' ? 'opacity-70 cursor-not-allowed' : ''
+                ]">
+                <div class="flex items-center gap-3">
+                  <div class="w-5 h-5 rounded border flex items-center justify-center transition-colors"
+                    :class="state.attendeeIds.includes(student.id) ? 'bg-[#0984e3] border-[#0984e3]' : 'bg-white border-slate-300 dark:bg-slate-700 dark:border-slate-600'">
+                    <UIcon v-if="state.attendeeIds.includes(student.id)" name="i-heroicons-check"
+                      class="text-white text-xs" />
+                  </div>
+                  <span class="text-sm font-medium"
+                    :class="state.attendeeIds.includes(student.id) ? 'text-[#0984e3]' : 'text-slate-700 dark:text-slate-300'">
+                    {{ student.name }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <p v-if="errors.attendance" class="text-red-500 text-[10px] mt-2 font-medium text-center">
+              Selecione pelo menos um aluno presente (exceto para Falta).
+            </p>
           </div>
         </div>
 
