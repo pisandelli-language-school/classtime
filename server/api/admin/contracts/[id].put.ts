@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
   try {
     return await safeQuery(async () => {
       // 1. Update Contract
+      // 1. Update Contract
       const contract = await prisma.contract.update({
         where: { id },
         data: {
@@ -25,6 +26,32 @@ export default defineEventHandler(async (event) => {
         },
         include: { class: true, student: true },
       });
+
+      // 1b. Update Class Students if applicable
+      if (contract.classId && body.studentNames) {
+        const studentsToConnect = [];
+        for (const sName of body.studentNames) {
+          const sTrim = sName.trim();
+          if (sTrim) {
+            let s = await prisma.student.findFirst({
+              where: { name: sTrim },
+            });
+            if (!s) {
+              s = await prisma.student.create({ data: { name: sTrim } });
+            }
+            studentsToConnect.push({ id: s.id });
+          }
+        }
+
+        await prisma.class.update({
+          where: { id: contract.classId },
+          data: {
+            students: {
+              set: studentsToConnect,
+            },
+          },
+        });
+      }
 
       // 2. Update Teacher Assignment
       if (teacherId) {

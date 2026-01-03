@@ -166,10 +166,24 @@ const formatDate = (dateStr: string | null) => {
                   <td class="px-6 py-4">
                     <div class="flex flex-col">
                       <span class="font-medium text-slate-900 dark:text-white">{{ contract.subjectName }}</span>
-                      <div class="mt-1">
+                      <div class="mt-1 flex gap-2 items-center">
                         <UBadge :color="contract.type === 'Turma' ? 'primary' : 'secondary'" variant="subtle" size="sm">
                           {{ contract.type }}
                         </UBadge>
+
+                        <!-- Students Popover for Class -->
+                        <UPopover v-if="contract.type === 'Turma' && contract.students?.length" mode="hover">
+                          <UButton color="gray" variant="ghost" size="2xs" icon="i-heroicons-users" class="-ml-1" />
+                          <template #panel>
+                            <div class="p-3 text-xs text-slate-700 dark:text-slate-200 min-w-[150px]">
+                              <p class="font-bold mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">Alunos ({{
+                                contract.students.length }})</p>
+                              <ul class="space-y-1">
+                                <li v-for="s in contract.students" :key="s.id">• {{ s.name }}</li>
+                              </ul>
+                            </div>
+                          </template>
+                        </UPopover>
                       </div>
                     </div>
                   </td>
@@ -216,7 +230,7 @@ const formatDate = (dateStr: string | null) => {
                       <div class="flex gap-2">
                         <span class="w-12 text-slate-400">Início:</span>
                         <span class="font-medium text-slate-700 dark:text-slate-300">{{ formatDate(contract.startDate)
-                        }}</span>
+                          }}</span>
                       </div>
                       <div class="flex gap-2">
                         <span class="w-12 text-slate-400">Previsão:</span>

@@ -45,8 +45,22 @@ const state = reactive({
   totalHours: 40,
   weeklyHours: 2,
   startDate: new Date().toISOString().split('T')[0],
-  endDate: ''
+  endDate: '',
+  students: [] as string[]
 })
+
+const newStudentName = ref('')
+
+const addStudent = () => {
+  if (newStudentName.value.trim()) {
+    state.students.push(newStudentName.value.trim())
+    newStudentName.value = ''
+  }
+}
+
+const removeStudent = (index: number) => {
+  state.students.splice(index, 1)
+}
 
 const selectedTeacher = computed(() => {
   return teachers.value.find((t: any) => t.dbId === state.teacherId)
@@ -77,6 +91,8 @@ watch(() => props.contract, (newVal) => {
     state.startDate = newVal.startDate ? new Date(newVal.startDate).toISOString().split('T')[0] : ''
     state.endDate = newVal.predictedEndDate ? new Date(newVal.predictedEndDate).toISOString().split('T')[0] ?? '' : ''
     state.teacherId = newVal.teacher?.id
+    // Flatten students array to just names for editing
+    state.students = newVal.students?.map((s: any) => s.name) || []
     // Name/Type hidden/fixed
   } else {
     mode.value = 'CREATE'
@@ -86,6 +102,7 @@ watch(() => props.contract, (newVal) => {
     state.totalHours = 40
     state.weeklyHours = 2
     state.startDate = new Date().toISOString().split('T')[0]
+    state.students = []
     autoCalcEndDate()
   }
 }, { immediate: true })
@@ -117,6 +134,12 @@ const onSubmit = async () => {
       return
     }
 
+    if (state.type === 'Turma' && state.students.length < 2) {
+      toast.add({ title: 'Erro', description: 'Uma turma deve ter no mínimo 2 alunos. Caso contrário, cadastre como VIP.', color: 'error' })
+      isLoading.value = false
+      return
+    }
+
     if (mode.value === 'CREATE') {
       // POST
       const payload: any = {
@@ -127,7 +150,7 @@ const onSubmit = async () => {
         name: state.name,
         type: state.type,
         teacherId: state.teacherId,
-        // Removed Renew logic
+        studentNames: state.students, // Send students list
       }
 
       await $fetch('/api/admin/contracts', {
@@ -146,7 +169,8 @@ const onSubmit = async () => {
           weeklyHours: state.weeklyHours,
           startDate: state.startDate,
           endDate: state.endDate,
-          teacherId: state.teacherId
+          teacherId: state.teacherId,
+          studentNames: state.students, // Send students list
         }
       })
       toast.add({ title: 'Sucesso', description: 'Contrato atualizado.', color: 'success' })
@@ -306,6 +330,38 @@ const handleDelete = async () => {
               <input v-model="state.endDate" type="date"
                 class="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 dark:bg-slate-900 dark:ring-slate-700 dark:text-white" />
             </div>
+          </div>
+
+          <!-- Students List (Turma Only) -->
+          <div v-if="state.type === 'Turma'"
+            class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
+              Alunos da Turma
+            </label>
+
+            <!-- List -->
+            <div v-if="state.students.length > 0" class="flex flex-wrap gap-2 mb-3">
+              <div v-for="(student, index) in state.students" :key="index"
+                class="flex items-center gap-1 px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full text-sm text-slate-700 dark:text-slate-200 shadow-sm">
+                <span>{{ student }}</span>
+                <button type="button" @click="removeStudent(index)"
+                  class="text-slate-400 hover:text-red-500 transition-colors">
+                  <UIcon name="i-heroicons-x-mark" class="text-base" />
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-sm text-slate-400 italic mb-3">Nenhum aluno adicionado.</p>
+
+            <!-- Add Input -->
+            <div class="flex gap-2">
+              <input v-model="newStudentName" @keydown.enter.prevent="addStudent" placeholder="Nome do aluno..."
+                class="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 dark:bg-slate-900 dark:ring-slate-700 dark:text-white" />
+              <button type="button" @click="addStudent"
+                class="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white text-sm font-semibold rounded-md hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                Adicionar
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Pressione Enter para adicionar.</p>
           </div>
 
           <!-- Hidden submit for standard form behavior if needed, but we use footer buttons -->

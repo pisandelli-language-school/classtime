@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
           class: {
             include: {
               assignments: { include: { timeEntries: true, teacher: true } },
+              students: true,
             },
           },
           student: {
@@ -115,6 +116,7 @@ export default defineEventHandler(async (event) => {
               email: assignments[0].teacher.email,
             }
           : null,
+        students: c.class?.students || [],
       };
     });
 

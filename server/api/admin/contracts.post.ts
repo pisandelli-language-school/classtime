@@ -31,7 +31,30 @@ export default defineEventHandler(async (event) => {
         // A. Create New Entity if needed
         if (!finalClassId && !finalStudentId && name && type) {
           if (type === 'Turma') {
-            const newClass = await tx.class.create({ data: { name } });
+            // Process Student List
+            const studentsToConnect = [];
+            const studentNames = body.studentNames || [];
+
+            for (const sName of studentNames) {
+              const sTrim = sName.trim();
+              if (sTrim) {
+                // Find or Create Student (to avoid duplicates if they exist already)
+                let s = await tx.student.findFirst({ where: { name: sTrim } });
+                if (!s) {
+                  s = await tx.student.create({ data: { name: sTrim } });
+                }
+                studentsToConnect.push({ id: s.id });
+              }
+            }
+
+            const newClass = await tx.class.create({
+              data: {
+                name,
+                students: {
+                  connect: studentsToConnect,
+                },
+              },
+            });
             finalClassId = newClass.id;
           } else {
             // Type = Aluno/VIP

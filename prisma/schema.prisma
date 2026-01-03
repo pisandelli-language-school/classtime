@@ -43,6 +43,7 @@ model Student {
   name        String
   assignments Assignment[]
   contracts   Contract[]
+  classes     Class[]
 }
 
 model Class {
@@ -56,6 +57,7 @@ model Class {
 
   assignments Assignment[]
   contracts   Contract[]
+  students    Student[]
 }
 
 enum ContractStatus {
