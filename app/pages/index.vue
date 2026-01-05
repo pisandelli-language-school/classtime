@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const usersStore = useUsersStore()
-const { teachers } = storeToRefs(usersStore)
+const { teachers, isLoading: isLoadingTeachers } = storeToRefs(usersStore)
 
 const selectedTeacherContext = ref<string | undefined>(undefined)
 
@@ -30,6 +30,21 @@ const selectedDate = ref('')
 const timesheet = computed(() => timesheetData.value?.timesheet)
 const assignments = computed(() => timesheetData.value?.assignments || [])
 const entries = computed(() => timesheet.value?.entries || [])
+const monthlyExpectedHours = computed(() => (timesheetData.value as any)?.user?.monthlyExpectedHours || 0)
+const monthlyWorkedHours = computed(() => {
+  return entries.value.reduce((acc: number, entry: any) => acc + Number(entry.duration || 0), 0)
+})
+
+const goalPercentage = computed(() => {
+  if (!monthlyExpectedHours.value) return 0
+  return Math.min((monthlyWorkedHours.value / monthlyExpectedHours.value) * 100, 100)
+})
+
+const goalColorClass = computed(() => {
+  if (goalPercentage.value >= 100) return 'bg-green-500'
+  if (goalPercentage.value >= 80) return 'bg-blue-500'
+  return 'bg-amber-500'
+})
 
 const hasAssignments = computed(() => assignments.value.length > 0)
 const showAdminPlaceholder = computed(() => canImpersonate.value && !selectedTeacherContext.value && !hasAssignments.value)
@@ -275,15 +290,17 @@ const getEntryTimeRange = (entry: any) => {
         <!-- Context Selector -->
         <div class="flex items-center gap-3">
           <div class="w-64 relative">
-            <select v-model="selectedTeacherContext"
-              class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-white bg-indigo-900/50 shadow-sm ring-1 ring-inset ring-indigo-700 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all cursor-pointer font-medium hover:bg-indigo-800">
+            <select v-model="selectedTeacherContext" :disabled="isLoadingTeachers"
+              class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-white bg-indigo-900/50 shadow-sm ring-1 ring-inset ring-indigo-700 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all cursor-pointer font-medium hover:bg-indigo-800 disabled:opacity-50 disabled:cursor-wait">
+              <option v-if="isLoadingTeachers" :value="undefined" disabled>Carregando professores...</option>
               <option :value="undefined">Minha Visão</option>
               <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.email">
                 Ver: {{ teacher.name }}
               </option>
             </select>
             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-indigo-300">
-              <span class="material-symbols-outlined text-sm">visibility</span>
+              <UIcon v-if="isLoadingTeachers" name="i-heroicons-arrow-path" class="animate-spin text-sm" />
+              <span v-else class="material-symbols-outlined text-sm">visibility</span>
             </div>
           </div>
 
@@ -409,16 +426,14 @@ const getEntryTimeRange = (entry: any) => {
               <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meta
                 Mensal</span>
               <div class="text-sm font-medium">
-                <span class="font-bold text-slate-900 dark:text-white">32h</span>
-                <span class="text-slate-400">/ 40h</span>
+                <span class="font-bold text-slate-900 dark:text-white">{{ monthlyWorkedHours.toFixed(1) }}h</span>
+                <span class="text-slate-400">/ {{ monthlyExpectedHours }}h</span>
               </div>
             </div>
             <div class="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full bg-green-500 rounded-full" style="width: 80%"></div>
+              <div class="h-full rounded-full transition-all duration-500" :class="goalColorClass" :style="{ width: `${goalPercentage}%` }"></div>
             </div>
           </div>
-
-
         </div>
       </div>
     </div>

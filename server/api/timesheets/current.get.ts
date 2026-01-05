@@ -134,11 +134,46 @@ export default defineEventHandler(async (event) => {
         ],
       },
       include: {
-        class: { select: { name: true, students: true } },
-        student: { select: { name: true } },
+        class: {
+          select: {
+            name: true,
+            students: true,
+            contracts: { where: { status: 'ACTIVE' } },
+          },
+        },
+        student: {
+          select: {
+            name: true,
+            contracts: { where: { status: 'ACTIVE' } },
+          },
+        },
       },
     })
   );
 
-  return { timesheet, assignments, userRole: dbUser.role };
+  // Calculate Monthly Expected Hours based on Active Contracts
+  // Logic matches admin/users.get.ts: Sum of (Weekly Hours * 4) for all assigned classes/students
+  let monthlyExpectedHours = 0;
+  assignments.forEach((a: any) => {
+    let weeklyHours = 0;
+    if (a.class) {
+      if (a.class.contracts && a.class.contracts.length > 0) {
+        weeklyHours = Number(a.class.contracts[0].weeklyHours);
+      }
+    } else if (a.student) {
+      if (a.student.contracts && a.student.contracts.length > 0) {
+        weeklyHours = Number(a.student.contracts[0].weeklyHours);
+      }
+    }
+    monthlyExpectedHours += weeklyHours * 4;
+  });
+
+  return {
+    timesheet,
+    assignments,
+    userRole: dbUser.role,
+    user: {
+      monthlyExpectedHours,
+    },
+  };
 });
