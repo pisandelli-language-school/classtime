@@ -38,6 +38,10 @@ const errors = reactive({
   attendance: false
 })
 
+const hasInfoErrors = computed(() => {
+  return errors.subject || errors.startTime || errors.endTime || errors.type || errors.description
+})
+
 const calculatedDuration = computed(() => {
   if (!state.startTime || !state.endTime) return '0.0'
 
@@ -179,16 +183,31 @@ const formattedDate = computed(() => {
 
       <!-- Tabs Header -->
       <div class="flex border-b border-slate-100 dark:border-slate-800">
-        <button v-for="tab in ['info', 'attendance']" :key="tab"
-          @click="showAttendanceTab || tab === 'info' ? activeTab = tab as any : null"
-          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative" :class="[
-            activeTab === tab ? 'text-[#0984e3]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-            !showAttendanceTab && tab === 'attendance' ? 'opacity-50 cursor-not-allowed' : ''
-          ]">
-          {{ tab === 'info' ? 'Informações' : 'Presença' }}
-          <span v-if="activeTab === tab" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
-          <span v-if="tab === 'attendance' && errors.attendance"
-            class="absolute top-2 right-4 w-2 h-2 rounded-full bg-red-500"></span>
+        <!-- Info Tab -->
+        <button
+          @click="activeTab = 'info'"
+          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative"
+          :class="[
+            hasInfoErrors ? 'text-red-600 bg-red-50 dark:bg-red-900/10 dark:text-red-400' : (activeTab === 'info' ? 'text-[#0984e3]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200')
+          ]"
+        >
+          Informações
+          <span v-if="activeTab === 'info' && !hasInfoErrors" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
+          <span v-if="hasInfoErrors" class="absolute bottom-0 left-0 w-full h-0.5 bg-red-500"></span>
+        </button>
+
+        <!-- Attendance Tab -->
+        <button
+          @click="showAttendanceTab || activeTab === 'attendance' ? activeTab = 'attendance' : null"
+          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative"
+          :class="[
+            errors.attendance ? 'text-red-600 bg-red-50 dark:bg-red-900/10 dark:text-red-400' : (activeTab === 'attendance' ? 'text-[#0984e3]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'),
+            !showAttendanceTab ? 'opacity-50 cursor-not-allowed' : ''
+          ]"
+        >
+          Presença
+          <span v-if="activeTab === 'attendance' && !errors.attendance" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
+          <span v-if="errors.attendance" class="absolute bottom-0 left-0 w-full h-0.5 bg-red-500"></span>
         </button>
       </div>
 
