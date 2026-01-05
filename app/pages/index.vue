@@ -2,6 +2,13 @@
 const usersStore = useUsersStore()
 const { teachers, isLoading: isLoadingTeachers } = storeToRefs(usersStore)
 
+const route = useRoute()
+const currentReferenceDate = ref(route.query.date ? new Date(route.query.date as string) : new Date())
+
+watch(() => route.query.date, (newDate) => {
+  if (newDate) currentReferenceDate.value = new Date(newDate as string)
+})
+
 const selectedTeacherContext = ref<string | undefined>(undefined)
 
 const { data: timesheetData, refresh, pending } = useFetch('/api/timesheets/current', {
@@ -167,11 +174,45 @@ const handleDeleteEntry = async (id: string) => {
 
 
 
-const handleRequestApproval = () => {
-  alert('Solicitação enviada ao gerente (Placeholder)')
+// --- Weekly Status & Approval ---
+const { data: weeklyStatusData, refresh: refreshStatus } = useFetch('/api/timesheets/weekly-status', {
+  query: {
+    date: computed(() => currentReferenceDate.value.toISOString()),
+    teacherEmail: selectedTeacherContext
+  },
+  watch: [currentReferenceDate, selectedTeacherContext]
+})
+
+const weeklyStatus = computed(() => (weeklyStatusData.value as any)?.status || 'PENDING')
+const rejectionReason = computed(() => (weeklyStatusData.value as any)?.rejectionReason)
+
+const isWeekLocked = computed(() => {
+  return weeklyStatus.value === 'SUBMITTED' || weeklyStatus.value === 'APPROVED'
+})
+
+const submitWeek = async () => {
+  if (!confirm('Deseja enviar a semana para aprovação? Você não poderá alterar os lançamentos após o envio.')) return
+
+  const loader = useLoader()
+  loader.startLoading('Enviando...')
+
+  try {
+    await $fetch('/api/timesheets/submit-week', {
+      method: 'POST',
+      body: {
+        date: currentReferenceDate.value
+      }
+    })
+    await refreshStatus()
+  } catch (e: any) {
+    alert('Erro ao enviar semana: ' + e.message)
+  } finally {
+    loader.stopLoading()
+  }
 }
 
-const currentReferenceDate = ref(new Date())
+
+
 
 const navigateWeek = (offset: number) => {
   const newDate = new Date(currentReferenceDate.value)
@@ -431,7 +472,8 @@ const getEntryTimeRange = (entry: any) => {
               </div>
             </div>
             <div class="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-500" :class="goalColorClass" :style="{ width: `${goalPercentage}%` }"></div>
+              <div class="h-full rounded-full transition-all duration-500" :class="goalColorClass"
+                :style="{ width: `${goalPercentage}%` }"></div>
             </div>
           </div>
         </div>
@@ -488,8 +530,9 @@ const getEntryTimeRange = (entry: any) => {
 
           <div class="flex-1 flex flex-col gap-2 pb-20">
 
-            <div v-for="entry in getEntriesForDay(day)" :key="entry.id" @click="handleEditEntry(entry)"
-              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/50 cursor-pointer transition-all group/card">
+            <div v-for="entry in getEntriesForDay(day)" :key="entry.id" @click="!isWeekLocked && handleEditEntry(entry)"
+              class="flex flex-col gap-2 p-3 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all group/card"
+              :class="isWeekLocked ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-md hover:border-primary/50 cursor-pointer'">
               <div class="flex justify-between items-start gap-2">
                 <h3 class="font-bold text-sm text-slate-900 dark:text-white line-clamp-1 flex-1">{{
                   entry.assignment?.class?.name ||
@@ -519,14 +562,14 @@ const getEntryTimeRange = (entry: any) => {
               </div>
             </div>
 
-            <button @click="day.getDay() === 0 ? handleRequestApproval() : handleLogTime(day.toISOString())" :class="[
-              'group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed transition-all hover:cursor-pointer',
-              day.getDay() === 0
-                ? 'border-amber-300 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:border-amber-400 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-500 dark:hover:bg-amber-900/30'
-                : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50'
+            <button @click="handleLogTime(day.toISOString())" :disabled="isWeekLocked" :class="[
+              'group flex items-center justify-center gap-2 w-full p-3 rounded-md border border-dashed transition-all',
+              isWeekLocked
+                ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-600'
+                : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary hover:border-primary/50 hover:cursor-pointer'
             ]">
-              <span class="material-symbols-outlined text-lg">{{ day.getDay() === 0 ? 'priority_high' : 'add' }}</span>
-              <span class="text-xs font-medium">{{ day.getDay() === 0 ? 'Solicitar Aprovação' : 'Lançar Horas' }}</span>
+              <span class="material-symbols-outlined text-lg">add</span>
+              <span class="text-xs font-medium">Lançar Horas</span>
             </button>
           </div>
         </div>
@@ -535,10 +578,33 @@ const getEntryTimeRange = (entry: any) => {
 
     <!-- Sticky Footer -->
     <div v-if="!showAdminPlaceholder"
-      class="flex-none bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex justify-end z-20">
-      <div class="flex gap-4">
+      class="flex-none bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 flex justify-between z-20">
 
-        <button
+      <!-- Rejection Alert -->
+      <div v-if="weeklyStatus === 'REJECTED' && rejectionReason"
+        class="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-lg border border-red-200 dark:border-red-800">
+        <UIcon name="i-heroicons-exclamation-circle" class="text-xl" />
+        <div>
+          <p class="text-xs font-bold uppercase">Semana Rejeitada</p>
+          <p class="text-sm">{{ rejectionReason }}</p>
+        </div>
+      </div>
+      <div v-else></div> <!-- Spacer -->
+
+      <div class="flex gap-4">
+        <div v-if="weeklyStatus === 'SUBMITTED'"
+          class="flex items-center gap-2 text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-4 py-2 rounded-lg border border-orange-200 dark:border-orange-800">
+          <UIcon name="i-heroicons-clock" class="text-xl animate-pulse" />
+          <span class="font-bold">Aguardando Aprovação</span>
+        </div>
+
+        <div v-if="weeklyStatus === 'APPROVED'"
+          class="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-lg border border-green-200 dark:border-green-800">
+          <UIcon name="i-heroicons-check-circle" class="text-xl" />
+          <span class="font-bold">Semana Aprovada</span>
+        </div>
+
+        <button v-if="weeklyStatus === 'PENDING' || weeklyStatus === 'REJECTED'" @click="submitWeek"
           class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-6 bg-[#0984e3] hover:bg-[#026aa7] text-white text-sm font-bold shadow-lg shadow-[#0984e3]/30 transition-all">
           <span class="truncate">Enviar Semana para Aprovação</span>
         </button>

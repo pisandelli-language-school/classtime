@@ -20,9 +20,10 @@ model User {
   hourlyRate Decimal?
   active     Boolean  @default(true)
 
-  assignments Assignment[]
-  timesheets  TimesheetPeriod[]
-  auditLogs   AuditLog[]
+  assignments    Assignment[]
+  timesheets     TimesheetPeriod[]
+  auditLogs      AuditLog[]
+  weeklyStatuses WeeklyTimesheetStatus[]
 }
 
 model Assignment {
@@ -141,4 +142,26 @@ model AuditLog {
   targetId  String?
   timestamp DateTime    @default(now())
   metadata  Json?
+}
+
+enum WeeklyStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model WeeklyTimesheetStatus {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  year            Int
+  week            Int
+  status          WeeklyStatus @default(PENDING)
+  rejectionReason String?
+
+  submissionDate DateTime?
+  approvalDate   DateTime?
+
+  @@unique([userId, year, week])
 }
