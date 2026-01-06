@@ -37,7 +37,7 @@ const filteredApprovals = computed(() => {
         const f = statusFilter.value
         list = list.filter((a: any) => a.status === f)
     }
-    return list.sort((a: any, b: any) => a.name.localeCompare(b.name))
+    return [...list].sort((a: any, b: any) => a.name.localeCompare(b.name))
 })
 
 // --- Modal State ---
@@ -133,7 +133,7 @@ const getStatusLabel = (status: string) => {
         </UCard>
 
         <!-- Table -->
-        <UCard :ui="{ body: { padding: 'p-0' } }">
+        <UCard :ui="{ body: { padding: 'p-0' } as any }">
             <div v-if="pending" class="p-8 text-center flex justify-center">
                 <UIcon name="i-heroicons-arrow-path" class="animate-spin text-2xl text-slate-400" />
             </div>
