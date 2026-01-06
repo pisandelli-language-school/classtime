@@ -264,13 +264,33 @@ const weekDays = computed(() => {
 })
 
 
+const entriesByDay = computed(() => {
+  const map: Record<string, any[]> = {}
+  
+  if (!filteredEntries.value) return map
+
+  for (const entry of filteredEntries.value) {
+    if (!entry.date) continue
+    // Normalize date string to YYYY-MM-DD for grouping
+    // We use the date string directly if it's already ISO, or parse it
+    const parts = String(entry.date).split('T')
+    const dateStr = parts[0]
+    if (!dateStr) continue
+    
+    if (!map[dateStr]) map[dateStr] = []
+    map[dateStr]!.push(entry)
+  }
+  return map
+})
+
 const getEntriesForDay = (date: Date) => {
-  return filteredEntries.value.filter(e => {
-    const entryDate = new Date(e.date)
-    return entryDate.getDate() === date.getDate() &&
-      entryDate.getMonth() === date.getMonth() &&
-      entryDate.getFullYear() === date.getFullYear()
-  })
+  // Construct YYYY-MM-DD key from the day object
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const key = `${y}-${m}-${d}`
+  
+  return entriesByDay.value[key] || []
 }
 
 const formatDate = (date: Date) => {
