@@ -168,8 +168,44 @@ export default defineEventHandler(async (event) => {
     monthlyExpectedHours += weeklyHours * 4;
   });
 
+  // Determine Fetching Strategy: Month vs Week
+  const queryDate = query.date ? new Date(query.date as string) : new Date();
+
+  // Also fetch entries for the entire ISO week to handle cross-month boundaries
+  // This solves the issue where entries "disappear" if they belong to the adjacent month in the same week
+  const { startOfISOWeek, endOfISOWeek } = await import('date-fns');
+  const weekStart = startOfISOWeek(queryDate);
+  const weekEnd = endOfISOWeek(queryDate);
+
+  const entriesInWeek = await safeQuery(() =>
+    prisma.timeEntry.findMany({
+      where: {
+        timesheetPeriod: { userId: targetUserId },
+        date: {
+          gte: weekStart,
+          lte: weekEnd,
+        },
+      },
+      orderBy: { date: 'asc' },
+      include: {
+        assignment: {
+          include: {
+            class: { select: { name: true, students: true } },
+            student: { select: { name: true } },
+          },
+        },
+        attendees: {
+          select: { id: true, name: true },
+        },
+      },
+    })
+  );
+
   return {
-    timesheet,
+    timesheet: {
+      ...timesheet,
+      entries: entriesInWeek, // Override entries with the full week set (or you could merge if preferred, but this is cleaner for the view)
+    },
     assignments,
     userRole: dbUser.role,
     user: {

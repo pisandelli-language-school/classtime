@@ -2,7 +2,6 @@
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-const { data: currentUser } = useFetch('/api/auth/me')
 // Assuming auth middleware handles redirect if not admin, but good to check
 
 // --- Date Navigation ---

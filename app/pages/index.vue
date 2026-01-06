@@ -14,8 +14,12 @@ const selectedTeacherContext = ref<string | undefined>(undefined)
 const { data: timesheetData, refresh, pending } = useFetch('/api/timesheets/current', {
   lazy: true,
   query: {
-    teacherEmail: selectedTeacherContext
-  }
+    teacherEmail: selectedTeacherContext,
+    month: computed(() => currentReferenceDate.value.getMonth() + 1),
+    year: computed(() => currentReferenceDate.value.getFullYear()),
+    date: computed(() => currentReferenceDate.value.toISOString())
+  },
+  watch: [selectedTeacherContext, currentReferenceDate]
 })
 
 const canImpersonate = computed(() => {
