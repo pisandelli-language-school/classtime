@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { format, startOfISOWeek, endOfISOWeek, addWeeks, subWeeks } from 'date-fns'
 
 // Assuming auth middleware handles redirect if not admin, but good to check
 
 // --- Date Navigation ---
-const currentDate = ref(new Date())
+const currentDate = useState<Date>('approvals-ref-date', () => new Date())
 
 const weekRange = computed(() => {
-    const start = startOfWeek(currentDate.value, { locale: ptBR })
-    const end = endOfWeek(currentDate.value, { locale: ptBR })
+    const start = startOfISOWeek(currentDate.value)
+    const end = endOfISOWeek(currentDate.value)
     return `${format(start, 'dd/MM')} - ${format(end, 'dd/MM')}`
 })
 
@@ -156,7 +155,13 @@ const getStatusLabel = (status: string) => {
                         <!-- Professor -->
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
-                                <UAvatar :src="item.avatar || undefined" :alt="item.name" size="md" />
+                                <div
+                                    class="relative inline-flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700">
+                                    <img v-if="item.avatar" :src="item.avatar" :alt="item.name"
+                                        class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                                    <span v-else class="text-sm font-medium text-gray-500 dark:text-gray-400">{{
+                                        item.name.charAt(0).toUpperCase() }}</span>
+                                </div>
                                 <div class="flex flex-col">
                                     <span class="font-bold text-slate-900 dark:text-white">{{ item.name }}</span>
                                     <span class="text-xs text-slate-500">{{ item.email }}</span>

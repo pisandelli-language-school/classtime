@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { format, startOfWeek, endOfWeek, isSameDay } from 'date-fns'
+import { format, startOfISOWeek, endOfISOWeek, isSameDay, isWithinInterval } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 const props = defineProps<{
@@ -18,19 +18,20 @@ const isOpen = computed({
 })
 
 // --- Data Fetching ---
-const weekStart = computed(() => startOfWeek(props.date, { locale: ptBR }))
-const weekEnd = computed(() => endOfWeek(props.date, { locale: ptBR }))
+const weekStart = computed(() => startOfISOWeek(props.date))
+const weekEnd = computed(() => endOfISOWeek(props.date))
 
 const month = computed(() => weekStart.value.getMonth() + 1)
 const year = computed(() => weekStart.value.getFullYear())
 
 const { data: timesheetData, pending } = useFetch('/api/timesheets/current', {
     query: {
-        teacherEmail: props.teacherEmail,
+        teacherEmail: computed(() => props.teacherEmail),
         month,
-        year
+        year,
+        date: computed(() => props.date.toISOString())
     },
-    watch: [() => props.teacherEmail, month, year]
+    watch: [() => props.teacherEmail, month, year, () => props.date]
 })
 
 // Flatten entries and filter by week
@@ -38,7 +39,7 @@ const weekEntries = computed(() => {
     const entries = timesheetData.value?.timesheet?.entries || []
     return entries.filter((e: any) => {
         const d = new Date(e.date)
-        return d >= weekStart.value && d <= weekEnd.value
+        return isWithinInterval(d, { start: weekStart.value, end: weekEnd.value })
     })
 })
 
@@ -110,7 +111,9 @@ const cancelReject = () => {
                 <div v-if="pending" class="flex justify-center py-8">
                     <UIcon name="i-heroicons-arrow-path" class="animate-spin text-2xl text-slate-400" />
                 </div>
-                <div v-else-if="weekEntries.length === 0" class="text-center py-8 text-slate-400">
+
+
+                <div v-if="weekEntries.length === 0 && !pending" class="text-center py-8 text-slate-400">
                     Sem lançamentos nesta semana.
                 </div>
 
@@ -163,10 +166,10 @@ const cancelReject = () => {
 
                     <!-- Actions -->
                     <div v-if="!isRejecting" class="flex justify-end gap-3">
-                        <UButton color="red" variant="soft" icon="i-heroicons-x-circle" @click="isRejecting = true">
+                        <UButton color="error" variant="soft" icon="i-heroicons-x-circle" @click="isRejecting = true">
                             Rejeitar Semana
                         </UButton>
-                        <UButton color="green" variant="solid" icon="i-heroicons-check-circle"
+                        <UButton color="success" variant="solid" icon="i-heroicons-check-circle"
                             @click="$emit('action', 'APPROVE')">
                             Aprovar Semana
                         </UButton>
@@ -180,7 +183,7 @@ const cancelReject = () => {
                             :rows="2" autofocus />
                         <div class="flex justify-end gap-2">
                             <UButton color="neutral" variant="ghost" size="sm" @click="cancelReject">Cancelar</UButton>
-                            <UButton color="red" variant="solid" size="sm" @click="confirmReject">Confirmar Rejeição
+                            <UButton color="error" variant="solid" size="sm" @click="confirmReject">Confirmar Rejeição
                             </UButton>
                         </div>
                     </div>

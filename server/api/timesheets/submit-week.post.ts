@@ -32,11 +32,36 @@ export default defineEventHandler(async (event) => {
   // User might want to submit empty week like "I didn't work"?
   // Let's allow it for now, or just warn in frontend.
 
+  // Determine Target User ID
+  let targetUserId = dbUser.id;
+  const requestedTeacherEmail = body.teacherEmail?.toLowerCase(); // Use separate field for safety
+
+  if (requestedTeacherEmail) {
+    if (dbUser.role === 'ROOT' || dbUser.role === 'MANAGER') {
+      const requestedUser = await safeQuery(() =>
+        prisma.user.findUnique({ where: { email: requestedTeacherEmail } })
+      );
+      if (requestedUser) {
+        targetUserId = requestedUser.id;
+      } else {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Teacher not found',
+        });
+      }
+    } else {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden: Cannot submit for others',
+      });
+    }
+  }
+
   const status = await safeQuery(() =>
     prisma.weeklyTimesheetStatus.upsert({
       where: {
         userId_year_week: {
-          userId: dbUser.id,
+          userId: targetUserId,
           year,
           week,
         },
@@ -47,7 +72,7 @@ export default defineEventHandler(async (event) => {
         rejectionReason: null, // Clear previous rejection reason
       },
       create: {
-        userId: dbUser.id,
+        userId: targetUserId,
         year,
         week,
         status: WeeklyStatus.SUBMITTED,

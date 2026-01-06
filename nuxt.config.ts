@@ -46,4 +46,15 @@ export default defineNuxtConfig({
       ],
     },
   },
+  vite: {
+    optimizeDeps: {
+      include: [
+        'date-fns',
+        'date-fns/locale',
+        'zod',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+      ],
+    },
+  },
 });

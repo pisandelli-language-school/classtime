@@ -30,7 +30,7 @@ const filteredUsers = computed(() => {
     users = users.filter((u: any) => u.role === selectedRole.value)
   }
 
-  return users.sort((a: any, b: any) => a.name.localeCompare(b.name))
+  return [...users].sort((a: any, b: any) => a.name.localeCompare(b.name))
 })
 
 const formatCurrency = (value: number | null) => {

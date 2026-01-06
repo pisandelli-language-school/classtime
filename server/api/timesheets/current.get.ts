@@ -36,6 +36,18 @@ export default defineEventHandler(async (event) => {
   let month = Number(query.month);
   let year = Number(query.year);
 
+  // Determine Fetching Strategy: Month vs Week
+  let queryDate = query.date ? new Date(query.date as string) : new Date();
+  if (isNaN(queryDate.getTime())) {
+    queryDate = new Date();
+  }
+
+  // Also fetch entries for the entire ISO week to handle cross-month boundaries
+  // This solves the issue where entries "disappear" if they belong to the adjacent month in the same week
+  const { startOfISOWeek, endOfISOWeek } = await import('date-fns');
+  const weekStart = startOfISOWeek(queryDate);
+  const weekEnd = endOfISOWeek(queryDate);
+
   // Default to current month if params are missing or invalid
   if (!month || !year || isNaN(month) || isNaN(year)) {
     month = now.getMonth() + 1;
@@ -44,7 +56,7 @@ export default defineEventHandler(async (event) => {
 
   // Determine Target User ID (Context Switch)
   let targetUserId = dbUser.id;
-  const requestedTeacherEmail = query.teacherEmail as string;
+  const requestedTeacherEmail = (query.teacherEmail as string)?.toLowerCase();
 
   if (requestedTeacherEmail) {
     // Security Check: Only Admins/Managers can view other's timesheets
@@ -167,16 +179,6 @@ export default defineEventHandler(async (event) => {
     }
     monthlyExpectedHours += weeklyHours * 4;
   });
-
-  // Determine Fetching Strategy: Month vs Week
-  const queryDate = query.date ? new Date(query.date as string) : new Date();
-
-  // Also fetch entries for the entire ISO week to handle cross-month boundaries
-  // This solves the issue where entries "disappear" if they belong to the adjacent month in the same week
-  const { startOfISOWeek, endOfISOWeek } = await import('date-fns');
-  const weekStart = startOfISOWeek(queryDate);
-  const weekEnd = endOfISOWeek(queryDate);
-
   const entriesInWeek = await safeQuery(() =>
     prisma.timeEntry.findMany({
       where: {

@@ -3,7 +3,9 @@ const usersStore = useUsersStore()
 const { teachers, isLoading: isLoadingTeachers } = storeToRefs(usersStore)
 
 const route = useRoute()
-const currentReferenceDate = ref(route.query.date ? new Date(route.query.date as string) : new Date())
+const currentReferenceDate = useState<Date>('timesheet-ref-date', () =>
+  route.query.date ? new Date(route.query.date as string) : new Date()
+)
 
 watch(() => route.query.date, (newDate) => {
   if (newDate) currentReferenceDate.value = new Date(newDate as string)
@@ -198,18 +200,42 @@ const submitWeek = async () => {
   if (!confirm('Deseja enviar a semana para aprovação? Você não poderá alterar os lançamentos após o envio.')) return
 
   const loader = useLoader()
+  const toast = useToast()
+
   loader.startLoading('Enviando...')
 
   try {
     await $fetch('/api/timesheets/submit-week', {
       method: 'POST',
       body: {
-        date: currentReferenceDate.value
+        date: currentReferenceDate.value,
+        teacherEmail: selectedTeacherContext.value
       }
     })
-    await refreshStatus()
+
+    // Force refresh of both status and data
+    await Promise.all([
+      refreshStatus(),
+      refresh()
+    ])
+
+    // Explicitly update computed property trigger if needed
+    // But refreshStatus should handle it.
+
+    toast.add({
+      title: 'Semana Enviada!',
+      description: 'Sua folha de pontos foi enviada para aprovação.',
+      color: 'success',
+      icon: 'i-heroicons-check-circle'
+    })
+
   } catch (e: any) {
-    alert('Erro ao enviar semana: ' + e.message)
+    toast.add({
+      title: 'Erro ao enviar',
+      description: e.message || 'Ocorreu um erro ao enviar a semana.',
+      color: 'error',
+      icon: 'i-heroicons-exclamation-circle'
+    })
   } finally {
     loader.stopLoading()
   }
@@ -266,7 +292,7 @@ const weekDays = computed(() => {
 
 const entriesByDay = computed(() => {
   const map: Record<string, any[]> = {}
-  
+
   if (!filteredEntries.value) return map
 
   for (const entry of filteredEntries.value) {
@@ -276,7 +302,7 @@ const entriesByDay = computed(() => {
     const parts = String(entry.date).split('T')
     const dateStr = parts[0]
     if (!dateStr) continue
-    
+
     if (!map[dateStr]) map[dateStr] = []
     map[dateStr]!.push(entry)
   }
@@ -289,7 +315,7 @@ const getEntriesForDay = (date: Date) => {
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   const key = `${y}-${m}-${d}`
-  
+
   return entriesByDay.value[key] || []
 }
 
@@ -350,41 +376,43 @@ const getEntryTimeRange = (entry: any) => {
 
     <!-- Admin Toolbar -->
     <div v-if="canImpersonate" class="flex-none bg-indigo-950 border-b border-indigo-900 z-40 relative">
-      <div class="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-4 px-4 py-2">
+      <ClientOnly>
+        <div class="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-4 px-4 py-2">
 
-        <!-- Context Selector -->
-        <div class="flex items-center gap-3">
-          <div class="w-64 relative">
-            <select v-model="selectedTeacherContext" :disabled="isLoadingTeachers"
-              class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-white bg-indigo-900/50 shadow-sm ring-1 ring-inset ring-indigo-700 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all cursor-pointer font-medium hover:bg-indigo-800 disabled:opacity-50 disabled:cursor-wait">
-              <option v-if="isLoadingTeachers" :value="undefined" disabled>Carregando professores...</option>
-              <option :value="undefined">Minha Visão</option>
-              <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.email">
-                Ver: {{ teacher.name }}
-              </option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-indigo-300">
-              <UIcon v-if="isLoadingTeachers" name="i-heroicons-arrow-path" class="animate-spin text-sm" />
-              <span v-else class="material-symbols-outlined text-sm">visibility</span>
+          <!-- Context Selector -->
+          <div class="flex items-center gap-3">
+            <div class="w-64 relative">
+              <select v-model="selectedTeacherContext" :disabled="isLoadingTeachers"
+                class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-white bg-indigo-900/50 shadow-sm ring-1 ring-inset ring-indigo-700 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 transition-all cursor-pointer font-medium hover:bg-indigo-800 disabled:opacity-50 disabled:cursor-wait">
+                <option v-if="isLoadingTeachers" :value="undefined" disabled>Carregando professores...</option>
+                <option :value="undefined">Minha Visão</option>
+                <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.email">
+                  Ver: {{ teacher.name }}
+                </option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-indigo-300">
+                <UIcon v-if="isLoadingTeachers" name="i-heroicons-arrow-path" class="animate-spin text-sm" />
+                <span v-else class="material-symbols-outlined text-sm">visibility</span>
+              </div>
+            </div>
+
+            <div v-if="selectedTeacherContext"
+              class="flex items-center gap-1.5 text-xs text-indigo-200 bg-indigo-800 px-3 py-1.5 rounded-full border border-indigo-700/50 shadow-sm">
+              <span class="material-symbols-outlined text-[16px]">info</span>
+              <span class="font-medium">Visualizando como <strong class="text-white">{{teachers.find(t => t.email ===
+                selectedTeacherContext)?.name}}</strong></span>
             </div>
           </div>
 
-          <div v-if="selectedTeacherContext"
-            class="flex items-center gap-1.5 text-xs text-indigo-200 bg-indigo-800 px-3 py-1.5 rounded-full border border-indigo-700/50 shadow-sm">
-            <span class="material-symbols-outlined text-[16px]">info</span>
-            <span class="font-medium">Visualizando como <strong class="text-white">{{teachers.find(t => t.email ===
-              selectedTeacherContext)?.name}}</strong></span>
-          </div>
+          <!-- History Button -->
+          <button v-if="selectedTeacherContext" @click="() => { isAuditDrawerOpen = true; }"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-indigo-900/50 hover:bg-indigo-800 border border-indigo-700 text-xs font-medium text-indigo-100 hover:text-white transition-colors cursor-pointer">
+            <span class="material-symbols-outlined text-sm">history</span>
+            <span>Histórico</span>
+          </button>
+
         </div>
-
-        <!-- History Button -->
-        <button v-if="selectedTeacherContext" @click="() => { isAuditDrawerOpen = true; }"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-indigo-900/50 hover:bg-indigo-800 border border-indigo-700 text-xs font-medium text-indigo-100 hover:text-white transition-colors cursor-pointer">
-          <span class="material-symbols-outlined text-sm">history</span>
-          <span>Histórico</span>
-        </button>
-
-      </div>
+      </ClientOnly>
     </div>
     <!-- Secondary Header / Controls -->
     <div class="flex-none border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
