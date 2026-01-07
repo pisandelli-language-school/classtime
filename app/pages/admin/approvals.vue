@@ -173,8 +173,10 @@ const getStatusLabel = (status: string) => {
                         <td class="px-6 py-4 text-center">
                             <div class="flex flex-col items-center">
                                 <span class="text-lg font-mono font-semibold" :class="{
-                                    'text-green-600': Number(item.weeklyWorkedHours) >= item.weeklyExpectedHours,
-                                    'text-amber-500': Number(item.weeklyWorkedHours) < item.weeklyExpectedHours
+                                    'text-green-600 dark:text-green-400': Number(item.weeklyWorkedHours) >= item.weeklyExpectedHours && item.weeklyExpectedHours > 0,
+                                    'text-amber-500 dark:text-amber-400': Number(item.weeklyWorkedHours) > 0 && Number(item.weeklyWorkedHours) < item.weeklyExpectedHours,
+                                    'text-red-500 dark:text-red-400': Number(item.weeklyWorkedHours) === 0 && item.weeklyExpectedHours > 0,
+                                    'text-blue-500 dark:text-blue-400': item.weeklyExpectedHours === 0
                                 }">
                                     {{ item.weeklyWorkedHours }}h
                                 </span>
