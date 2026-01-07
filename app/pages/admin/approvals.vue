@@ -75,10 +75,10 @@ const handleApprovalAction = async (action: 'APPROVE' | 'REJECT', reason?: strin
 // Helpers
 const getStatusColor = (status: string) => {
     switch (status) {
-        case 'APPROVED': return 'green' // success
-        case 'SUBMITTED': return 'orange' // warning
-        case 'REJECTED': return 'red' // error
-        default: return 'gray' // neutral
+        case 'APPROVED': return 'success'
+        case 'SUBMITTED': return 'info' // Uses our configured Blue (#0984e3)
+        case 'REJECTED': return 'error'
+        default: return 'warning' // Pending is now Orange/Warning
     }
 }
 const getStatusLabel = (status: string) => {
@@ -184,7 +184,7 @@ const getStatusLabel = (status: string) => {
 
                         <!-- Status -->
                         <td class="px-6 py-4 text-center">
-                            <UBadge :color="getStatusColor(item.status) as any" variant="soft">
+                            <UBadge :color="getStatusColor(item.status)" variant="soft">
                                 {{ getStatusLabel(item.status) }}
                             </UBadge>
                             <div v-if="item.rejectionReason" class="text-xs text-red-500 mt-1 max-w-[150px] truncate"
