@@ -44,11 +44,15 @@ const selectedTeacherId = ref<string | null>(null)
 const selectedTeacherName = ref('')
 const selectedTeacherEmail = ref('')
 const isDetailModalOpen = ref(false)
+const selectedTeacherExpectedHours = ref(0)
+const selectedTeacherAvatar = ref<string | null>(null)
 
 const openDetail = (teacher: any) => {
     selectedTeacherId.value = teacher.id
     selectedTeacherName.value = teacher.name
     selectedTeacherEmail.value = teacher.email
+    selectedTeacherExpectedHours.value = teacher.weeklyExpectedHours || 0
+    selectedTeacherAvatar.value = teacher.avatar || null
     isDetailModalOpen.value = true
 }
 
@@ -89,6 +93,23 @@ const getStatusLabel = (status: string) => {
         default: return 'Pendente'
     }
 }
+
+
+const getInitials = (name: string) => {
+    if (!name) return '?'
+    return name
+        .split(' ')
+        .map(n => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+}
+
+const imageErrors = ref<Record<string, boolean>>({})
+const handleImageError = (id: string) => {
+    imageErrors.value[id] = true
+}
+
 </script>
 
 <template>
@@ -99,7 +120,7 @@ const getStatusLabel = (status: string) => {
                 <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Aprovação de Horas</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">Gerencie e aprove os lançamentos semanais.</p>
             </div>
-            <UButton to="/" variant="ghost" icon="i-heroicons-arrow-left-20-solid">Voltar ao Timesheet</UButton>
+
         </div>
 
         <!-- Controls Bar -->
@@ -120,13 +141,7 @@ const getStatusLabel = (status: string) => {
 
                 <!-- Filters -->
                 <div class="flex gap-2">
-                    <USelectMenu v-model="statusFilter" :options="[
-                        { label: 'Todos', value: 'ALL' },
-                        { label: 'Pendentes', value: 'PENDING' },
-                        { label: 'Enviados', value: 'SUBMITTED' },
-                        { label: 'Aprovados', value: 'APPROVED' },
-                        { label: 'Rejeitados', value: 'REJECTED' }
-                    ]" value-attribute="value" option-attribute="label" />
+
                 </div>
             </div>
         </UCard>
@@ -151,16 +166,18 @@ const getStatusLabel = (status: string) => {
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <tr v-for="item in filteredApprovals" :key="item.id"
-                        class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        class="border-b dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer transition-colors even:bg-slate-50 dark:even:bg-slate-800/30"
+                        @click="openDetail(item)">
                         <!-- Professor -->
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 <div
                                     class="relative inline-flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700">
-                                    <img v-if="item.avatar" :src="item.avatar" :alt="item.name"
-                                        class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                                    <img v-if="item.avatar && !imageErrors[item.id]" :src="item.avatar" :alt="item.name"
+                                        class="w-full h-full object-cover" referrerpolicy="no-referrer"
+                                        @error="handleImageError(item.id)" />
                                     <span v-else class="text-sm font-medium text-gray-500 dark:text-gray-400">{{
-                                        item.name.charAt(0).toUpperCase() }}</span>
+                                        getInitials(item.name) }}</span>
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="font-bold text-slate-900 dark:text-white">{{ item.name }}</span>
@@ -197,8 +214,9 @@ const getStatusLabel = (status: string) => {
 
                         <!-- Actions -->
                         <td class="px-6 py-4 text-right">
-                            <UButton size="xs" color="neutral" variant="ghost" @click="openDetail(item)">
-                                Ver Detalhes
+                            <UButton size="xs" color="neutral" variant="soft" icon="i-heroicons-magnifying-glass"
+                                @click.stop="openDetail(item)">
+                                Analisar
                             </UButton>
                         </td>
                     </tr>
@@ -207,8 +225,9 @@ const getStatusLabel = (status: string) => {
         </UCard>
 
         <!-- Detailed Modal (Placeholder for now) -->
-        <WeeklySummaryModal v-model="isDetailModalOpen" :teacher-id="selectedTeacherId"
+        <WeeklySummaryModal v-if="isDetailModalOpen" v-model="isDetailModalOpen" :teacher-id="selectedTeacherId"
             :teacher-name="selectedTeacherName" :teacher-email="selectedTeacherEmail" :date="currentDate"
+            :expected-hours="selectedTeacherExpectedHours" :teacher-avatar="selectedTeacherAvatar"
             @action="handleApprovalAction" />
 
     </div>
