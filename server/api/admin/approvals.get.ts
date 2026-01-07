@@ -114,9 +114,9 @@ export default defineEventHandler(async (event) => {
             mode === 'week'
               ? { year: targetYear, week: targetWeek }
               : {
-                  status: { not: 'APPROVED' },
-                  // Ideally filter by date range logic here too, but WeeklyStatus stores week/year.
-                  // We'll filter in JS to correspond to the fetched TimeEntries window
+                  // Backlog: Fetch distinct statuses from recent years (e.g. last 1 year)
+                  // We perform strict date/status filtering in JS to handle ISO week logic correctly
+                  year: { gte: targetYear - 1 },
                 },
         },
         assignments: {
@@ -227,10 +227,38 @@ export default defineEventHandler(async (event) => {
       // Backlog: Find distinct weeks from unapproved Statuses AND unbilled Entries
       const distinctWeeks = new Set<string>();
 
-      // 1. From Statuses (already filtered to not APPROVED)
-      dbUser.weeklyStatuses.forEach((ws: any) =>
-        distinctWeeks.add(`${ws.year}-${ws.week}`)
-      );
+      // 1. From Statuses
+      dbUser.weeklyStatuses.forEach((ws: any) => {
+        // Validate if this week is within backlog range ( <= cutoff)
+        // Better: use the date-fns helper correctly. setISOWeek/Year operates on 'now', careful near year boundaries.
+        // Let's use simple logic:
+        // if (ws.year < backlogCutoffYear) or (ws.year == cutoffYear && ws.week < cutoffWeek) ?
+        // Using date object is safer.
+        // weekEnd is the cutoff DATE (end of last allowed week).
+        // Let's get the end of the week for this status.
+        // Helper needed to construct date from ISO week/year safely.
+        // We can just rely on the fact that if it's > weekEnd, discard.
+        // But constructing the date is the tricky part without the helper.
+        // We imported helper functions? No, checking imports...
+        // We have startOfISOWeek, endOfISOWeek. We don't have 'setISOWeek'.
+        // Let's assume we can filter effectively.
+
+        // Actually, easiest way:
+        const checkDate = new Date(ws.year, 0, 4); // roughly start of year
+        // We need 'date-fns' setISOWeek.
+        // Let's use getISOWeekYear logic reverse?
+        // Let's simplify: weekEnd gives us the Last Allowed Week Number/Year.
+        const cutoffYear = getISOWeekYear(weekEnd);
+        const cutoffWeek = getISOWeek(weekEnd);
+
+        // Compare:
+        if (
+          ws.year < cutoffYear ||
+          (ws.year === cutoffYear && ws.week <= cutoffWeek)
+        ) {
+          distinctWeeks.add(`${ws.year}-${ws.week}`);
+        }
+      });
 
       // 2. From Entries (already filtered by date range)
       const userEntries = timeEntries.filter(
@@ -262,8 +290,7 @@ export default defineEventHandler(async (event) => {
         (s: any) => s.year === wk.year && s.week === wk.week
       );
 
-      // If mode is backlog, we double check status (though query mostly handled it)
-      // If status is APPROVED, skip (for entries that might have popped up in approved weeks)
+      // If mode is backlog, we STRICTLY filter out APPROVED
       if (
         mode === 'backlog' &&
         statusRecord &&
