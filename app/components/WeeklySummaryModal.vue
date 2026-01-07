@@ -10,6 +10,7 @@ const props = defineProps<{
     date: Date // Any date within the week
     expectedHours?: number
     teacherAvatar?: string | null
+    status?: string // 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
 }>()
 
 const emit = defineEmits(['update:modelValue', 'action'])
@@ -17,6 +18,10 @@ const emit = defineEmits(['update:modelValue', 'action'])
 const isOpen = computed({
     get: () => props.modelValue,
     set: (val) => emit('update:modelValue', val)
+})
+
+const canApproveOrReject = computed(() => {
+    return props.status !== 'APPROVED' && props.status !== 'REJECTED'
 })
 
 // --- Data Fetching ---
@@ -177,7 +182,7 @@ const cancelReject = () => {
                                         {{ entry.assignment?.class?.name || entry.assignment?.student?.name }}
                                     </span>
                                     <span class="font-mono font-bold text-gray-700 dark:text-gray-200">{{ entry.duration
-                                    }}h</span>
+                                        }}h</span>
                                 </div>
                                 <div class="text-sm text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
                                     {{ entry.description }}
@@ -230,7 +235,7 @@ const cancelReject = () => {
                     <div class="h-px bg-slate-200 dark:bg-slate-700 w-full" />
 
                     <!-- Actions -->
-                    <div v-if="!isRejecting" class="flex justify-end gap-3">
+                    <div v-if="!isRejecting && canApproveOrReject" class="flex justify-end gap-3">
                         <UButton color="error" variant="soft" icon="i-heroicons-x-circle" @click="isRejecting = true">
                             Rejeitar Semana
                         </UButton>
@@ -238,6 +243,9 @@ const cancelReject = () => {
                             @click="$emit('action', 'APPROVE')">
                             Aprovar Semana
                         </UButton>
+                    </div>
+                    <div v-else-if="!canApproveOrReject" class="flex justify-end text-sm text-slate-500 italic">
+                        <span>Semana já {{ status === 'APPROVED' ? 'aprovada' : 'rejeitada' }}</span>
                     </div>
 
                     <!-- Rejection Form -->

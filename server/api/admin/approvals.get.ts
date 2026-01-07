@@ -5,6 +5,8 @@ import {
   getISOWeekYear,
   startOfISOWeek,
   endOfISOWeek,
+  startOfMonth,
+  subMonths,
 } from 'date-fns';
 import { Role } from '@prisma/client';
 import { google } from 'googleapis';
@@ -30,16 +32,34 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event);
   const dateStr = query.date as string;
+  const mode = (query.mode as string) || 'week'; // 'week' | 'backlog'
 
   if (!dateStr) {
     throw createError({ statusCode: 400, statusMessage: 'Date required' });
   }
 
   const targetDate = new Date(dateStr);
-  const week = getISOWeek(targetDate);
-  const year = getISOWeekYear(targetDate);
-  const weekStart = startOfISOWeek(targetDate);
-  const weekEnd = endOfISOWeek(targetDate);
+
+  // Week Mode Config
+  let weekStart = startOfISOWeek(targetDate);
+  let weekEnd = endOfISOWeek(targetDate);
+  let targetYear = getISOWeekYear(targetDate);
+  let targetWeek = getISOWeek(targetDate);
+
+  // Backlog Mode Config
+  // We want everything BEFORE the current month's start week?
+  // Or just everything "old". User said "until first week of current month".
+  // Let's set a wide range for backlog.
+  let backlogCutoffDate = startOfISOWeek(startOfMonth(targetDate));
+
+  if (mode === 'backlog') {
+    // Expand retrieval window. Let's go back 6 months for safety/performance
+    weekStart = subMonths(targetDate, 6);
+    // End date is strictly BEFORE the cutoff? Or inclusive?
+    // User: "Até a semana de...". Usually inclusive.
+    // Let's set weekEnd to the backlogCutoffDate (end of that week)
+    weekEnd = endOfISOWeek(backlogCutoffDate);
+  }
 
   // 1. Google Auth & Directory API
   const keyFilePath = path.resolve(
@@ -90,7 +110,14 @@ export default defineEventHandler(async (event) => {
       },
       include: {
         weeklyStatuses: {
-          where: { year, week },
+          where:
+            mode === 'week'
+              ? { year: targetYear, week: targetWeek }
+              : {
+                  status: { not: 'APPROVED' },
+                  // Ideally filter by date range logic here too, but WeeklyStatus stores week/year.
+                  // We'll filter in JS to correspond to the fetched TimeEntries window
+                },
         },
         assignments: {
           include: {
@@ -128,86 +155,157 @@ export default defineEventHandler(async (event) => {
       },
       select: {
         duration: true,
+        date: true,
         timesheetPeriod: { select: { userId: true } },
       },
     })
   );
 
   // 5. Merge Data
-  const result = relevantGoogleUsers.map((gUser: any) => {
+  const result: any[] = [];
+
+  relevantGoogleUsers.forEach((gUser: any) => {
     const dbUser = dbUsers.find(
       (u) => u.email.toLowerCase() === gUser.primaryEmail?.toLowerCase()
     ) as any;
 
-    // Default values if no DB user exists yet
-    let status = 'PENDING';
-    let weeklyWorkedHours = 0;
-    let weeklyExpectedHours = 0;
-    let submissionDate = null;
-    let approvalDate = null;
-    let rejectionReason = null;
-    let dbId = dbUser?.id || null;
-
-    if (dbUser) {
-      // Status
-      const statusRecord = dbUser.weeklyStatuses[0];
-      if (statusRecord) {
-        status = statusRecord.status;
-        submissionDate = statusRecord.submissionDate;
-        approvalDate = statusRecord.approvalDate;
-        rejectionReason = statusRecord.rejectionReason;
-      }
-
-      // Worked Hours
-      const userEntries = timeEntries.filter(
-        (e) => e.timesheetPeriod.userId === dbUser.id
-      );
-      weeklyWorkedHours = userEntries.reduce(
-        (acc, e) => acc + Number(e.duration),
-        0
-      );
-
-      // Expected Hours
-      if (dbUser.assignments) {
-        dbUser.assignments.forEach((a) => {
-          let wh = 0;
-          if (a.class) {
-            if (a.class.contracts && a.class.contracts.length > 0) {
-              wh = Number(a.class.contracts[0].weeklyHours);
-            } else {
-              wh = Number(a.class.weeklyHours || 0);
-            }
-          } else if (a.student) {
-            if (a.student.contracts && a.student.contracts.length > 0) {
-              wh = Number(a.student.contracts[0].weeklyHours);
-            }
-          }
-          weeklyExpectedHours += wh;
-        });
-      }
-    }
-
-    return {
-      id: dbId, // We still need dbId to approve/reject. If null, action will fail (User needs to login first to create DB record? OR we create it on fly?) -> For now let's pass what we have. API action might need to handle "missing db user"
+    // Base user object
+    const baseUserObj = {
+      id: dbUser?.id || null,
       googleId: gUser.id,
       name: gUser.name?.fullName || gUser.primaryEmail,
       email: gUser.primaryEmail,
       avatar: gUser.thumbnailPhotoUrl || null,
-
-      weeklyWorkedHours,
-      weeklyExpectedHours,
-      status,
-      submissionDate,
-      approvalDate,
-      rejectionReason,
+      weeklyExpectedHours: 0,
     };
-  });
 
-  // Filter out users who are purely Admins/Managers but have NO assignments and NO hours?
-  // User said "Lista de professores".
-  // If I list "Root" who never logs hours, it might be noise.
-  // But strict requirement was "Use Google List".
-  // Let's keep the filter (Teacher/Manager/Admin) as is.
+    // Calculate Expected Hours (Base - assumes constant)
+    if (dbUser && dbUser.assignments) {
+      dbUser.assignments.forEach((a: any) => {
+        let wh = 0;
+        if (a.class) {
+          if (a.class.contracts && a.class.contracts.length > 0) {
+            wh = Number(a.class.contracts[0].weeklyHours);
+          } else {
+            wh = Number(a.class.weeklyHours || 0);
+          }
+        } else if (a.student) {
+          if (a.student.contracts && a.student.contracts.length > 0) {
+            wh = Number(a.student.contracts[0].weeklyHours);
+          }
+        }
+        baseUserObj.weeklyExpectedHours += wh;
+      });
+    }
+
+    if (!dbUser) {
+      // If no DB user, only show empty pending for 'week' mode
+      if (mode === 'week') {
+        result.push({
+          ...baseUserObj,
+          weeklyWorkedHours: 0,
+          status: 'PENDING',
+          submissionDate: null,
+          approvalDate: null,
+          rejectionReason: null,
+          weekLabel: null,
+        });
+      }
+      return;
+    }
+
+    // Determine weeks to output
+    let weeksToProcess: { label: string; year: number; week: number }[] = [];
+
+    if (mode === 'week') {
+      weeksToProcess.push({
+        label: 'Current',
+        year: targetYear,
+        week: targetWeek,
+      });
+    } else {
+      // Backlog: Find distinct weeks from unapproved Statuses AND unbilled Entries
+      const distinctWeeks = new Set<string>();
+
+      // 1. From Statuses (already filtered to not APPROVED)
+      dbUser.weeklyStatuses.forEach((ws: any) =>
+        distinctWeeks.add(`${ws.year}-${ws.week}`)
+      );
+
+      // 2. From Entries (already filtered by date range)
+      const userEntries = timeEntries.filter(
+        (e) => e.timesheetPeriod.userId === dbUser.id
+      );
+      userEntries.forEach((e) => {
+        const date = new Date(e.date);
+        const w = getISOWeek(date);
+        const y = getISOWeekYear(date);
+        distinctWeeks.add(`${y}-${w}`);
+      });
+
+      distinctWeeks.forEach((key) => {
+        const [y, w] = key.split('-').map(Number);
+        weeksToProcess.push({ label: `${w}/${y}`, year: y, week: w });
+      });
+
+      // Sort weeks descending (newest first)
+      weeksToProcess.sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year;
+        return b.week - a.week;
+      });
+    }
+
+    // Process each week
+    weeksToProcess.forEach((wk) => {
+      // Status Record
+      const statusRecord = dbUser.weeklyStatuses.find(
+        (s: any) => s.year === wk.year && s.week === wk.week
+      );
+
+      // If mode is backlog, we double check status (though query mostly handled it)
+      // If status is APPROVED, skip (for entries that might have popped up in approved weeks)
+      if (
+        mode === 'backlog' &&
+        statusRecord &&
+        statusRecord.status === 'APPROVED'
+      )
+        return;
+
+      // Filter Entries for this specific week
+      const userEntries = timeEntries.filter((e) => {
+        if (e.timesheetPeriod.userId !== dbUser.id) return false;
+        const d = new Date(e.date);
+        return getISOWeek(d) === wk.week && getISOWeekYear(d) === wk.year;
+      });
+
+      const weeklyWorkedHours = userEntries.reduce(
+        (acc, e) => acc + Number(e.duration),
+        0
+      );
+
+      // Calculate Date Range Label
+      // We can use date-fns to get start/end of that specific ISO week
+      // Note: setISOWeek/Year helper or simple calculation
+      // For efficiency, let's just pass year/week and let frontend format, OR compute here.
+      // Let's compute a nice label here.
+      // Wait, helper function needed to get date from week/year.
+      // We can just rely on frontend 'weekLabel' logic if we pass start/end dates?
+      // Or simplified: Just pass year/week to result.
+
+      result.push({
+        ...baseUserObj,
+        weeklyWorkedHours,
+        status: statusRecord ? statusRecord.status : 'PENDING',
+        submissionDate: statusRecord?.submissionDate || null,
+        approvalDate: statusRecord?.approvalDate || null,
+        rejectionReason: statusRecord?.rejectionReason || null,
+        weekInfo: {
+          year: wk.year,
+          week: wk.week,
+        },
+      });
+    });
+  });
 
   return { success: true, approvals: result };
 });
