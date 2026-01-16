@@ -338,5 +338,9 @@ export default defineEventHandler(async (event) => {
     });
   });
 
-  return { success: true, approvals: result };
+  return {
+    success: true,
+    approvals: result,
+    currentUserRole: currentUser.role,
+  };
 });

@@ -72,15 +72,31 @@ const openDetail = (teacher: any) => {
     isDetailModalOpen.value = true
 }
 
-const handleApprovalAction = async (action: 'APPROVE' | 'REJECT', reason?: string) => {
-    if (!selectedTeacherId.value) return
+const handleApprovalAction = async (action: 'APPROVE' | 'REJECT' | 'REOPEN', reason?: string, item?: any) => {
+    // Determine target context: Item (Direct Action) vs SelectedTeacher (Modal)
+    const targetId = item?.userId || item?.id || selectedTeacherId.value
+
+    // Determine target Date: 
+    // If item provided, use its weekInfo to construct date.
+    // If modal open, use modalDate.
+    let targetDate = modalDate.value
+    if (item && item.weekInfo) {
+        let d = new Date()
+        d = setISOWeekYear(d, item.weekInfo.year)
+        d = setISOWeek(d, item.weekInfo.week)
+        targetDate = d
+    }
+
+    if (!targetId) return
+
+    if (action === 'REOPEN' && !confirm('Tem certeza que deseja reabrir esta semana? O status voltará para Pendente.')) return
 
     try {
         await $fetch('/api/admin/approvals/action', {
             method: 'POST',
             body: {
-                teacherId: selectedTeacherId.value,
-                date: modalDate.value, // Use modalDate context!
+                teacherId: targetId,
+                date: targetDate,
                 action,
                 reason
             }
@@ -261,6 +277,13 @@ const getWeekLabel = (year: number, week: number) => {
                                 @click.stop="openDetail(item)">
                                 Analisar
                             </UButton>
+                            <!-- Reopen Action (Root Only) -->
+                            <UTooltip
+                                v-if="approvalsData.currentUserRole === 'ROOT' && (item.status === 'APPROVED' || item.status === 'REJECTED')"
+                                text="Reabrir Semana (Root)">
+                                <UButton size="xs" color="warning" variant="ghost" icon="i-heroicons-arrow-path"
+                                    class="ml-2" @click.stop="handleApprovalAction('REOPEN', undefined, item)" />
+                            </UTooltip>
                         </td>
                     </tr>
                 </tbody>

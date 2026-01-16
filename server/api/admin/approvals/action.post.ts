@@ -43,6 +43,14 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Rejection reason is required',
       });
     }
+  } else if (action === 'REOPEN') {
+    if (currentUser.role !== Role.ROOT) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Only Root can reopen weeks',
+      });
+    }
+    newStatus = WeeklyStatus.PENDING;
   } else {
     throw createError({ statusCode: 400, statusMessage: 'Invalid action' });
   }
