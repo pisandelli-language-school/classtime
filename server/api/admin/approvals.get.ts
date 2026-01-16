@@ -50,15 +50,19 @@ export default defineEventHandler(async (event) => {
   // We want everything BEFORE the current month's start week?
   // Or just everything "old". User said "until first week of current month".
   // Let's set a wide range for backlog.
-  let backlogCutoffDate = startOfISOWeek(startOfMonth(targetDate));
-
   if (mode === 'backlog') {
     // Expand retrieval window. Let's go back 6 months for safety/performance
     weekStart = subMonths(targetDate, 6);
-    // End date is strictly BEFORE the cutoff? Or inclusive?
-    // User: "Até a semana de...". Usually inclusive.
-    // Let's set weekEnd to the backlogCutoffDate (end of that week)
-    weekEnd = endOfISOWeek(backlogCutoffDate);
+
+    // Backlog includes EVERYTHING STRICTLY BEFORE the current week.
+    // This ensures no "gap" for days in the current month that belong to previous weeks.
+    // We take the start of the current week and subtract 1 millisecond to get the end of the previous week?
+    // Or simpler: endOfISOWeek of the previous week.
+    const startOfCurrentWeek = startOfISOWeek(targetDate);
+    // Subtract 1 day to get into previous week, then get end of that week
+    const previousWeekDate = new Date(startOfCurrentWeek);
+    previousWeekDate.setDate(previousWeekDate.getDate() - 1);
+    weekEnd = endOfISOWeek(previousWeekDate);
   }
 
   // 1. Google Auth & Directory API
