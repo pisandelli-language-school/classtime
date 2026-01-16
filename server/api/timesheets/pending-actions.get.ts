@@ -9,8 +9,26 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
   }
 
+  const query = getQuery(event);
+  const targetEmail = (query.teacherEmail as string) || user.email;
+
+  // Fetch acting user to check permissions
+  const actingUser = await prisma.user.findUnique({
+    where: { email: user.email },
+  });
+
+  if (!actingUser) return { actions: [] };
+
+  // If trying to access another user's data, check Admin role
+  if (targetEmail !== user.email) {
+    if (actingUser.role !== 'ROOT' && actingUser.role !== 'MANAGER') {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+    }
+  }
+
+  // Fetch target DB user
   const dbUser = await safeQuery(() =>
-    prisma.user.findUnique({ where: { email: user.email } })
+    prisma.user.findUnique({ where: { email: targetEmail } })
   );
 
   if (!dbUser) return { actions: [] };

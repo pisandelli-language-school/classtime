@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { setISOWeek, setYear, startOfISOWeek } from 'date-fns'
 const usersStore = useUsersStore()
 const { teachers, isLoading: isLoadingTeachers } = storeToRefs(usersStore)
 
@@ -38,6 +39,7 @@ watch(canImpersonate, (isAllowed) => {
 
 const isModalOpen = ref(false)
 const isAuditDrawerOpen = ref(false)
+const isPendingActionsOpen = ref(false)
 const selectedDate = ref('')
 
 const timesheet = computed(() => timesheetData.value?.timesheet)
@@ -262,6 +264,45 @@ const isCurrentWeek = computed(() => {
   if (!start || !end) return false
 
   return today >= start && today <= end
+})
+
+// --- Pending Actions Notification ---
+const { data: pendingActionsData, refresh: refreshPendingActions } = useFetch('/api/timesheets/pending-actions', {
+  lazy: true,
+  query: {
+    teacherEmail: selectedTeacherContext
+  },
+  watch: [selectedTeacherContext] // Refresh when context changes (or maybe periodically?)
+})
+
+const pendingActions = computed(() => (pendingActionsData.value as any)?.actions || [])
+
+const jumpToWeek = (year: number, week: number) => {
+  // Robust Date Calculation using date-fns
+  // 1. Set Year
+  // 2. Set ISO Week
+  // 3. Get Start of that ISO Week
+  // 4. Ensure Monday
+  const date = startOfISOWeek(setISOWeek(setYear(new Date(), year), week))
+
+  // Update reference date
+  currentReferenceDate.value = date
+}
+
+const pendingActionItems = computed(() => {
+  if (pendingActions.value.length === 0) return []
+
+  // Transform actions into Dropdown items (Array of Arrays)
+  return [
+    pendingActions.value.map((action: any) => ({
+      label: action.label,
+      icon: action.type === 'REJECTED' ? 'i-heroicons-x-circle' : 'i-heroicons-clock',
+      click: () => jumpToWeek(action.year, action.week),
+      // Optional: styling
+      class: action.type === 'REJECTED' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400',
+      description: action.type === 'REJECTED' ? (action.reason || 'Sem motivo') : 'Não enviada'
+    }))
+  ]
 })
 
 const viewTitle = computed(() => {
@@ -514,6 +555,45 @@ const getEntryTimeRange = (entry: any) => {
 
         <!-- Weekly Goal Progress (Hide on Admin Placeholder) -->
         <div v-if="!showAdminPlaceholder" class="flex items-center gap-6 justify-end max-w-md w-full">
+
+          <!-- Pending Actions Notification (Manual Dropdown) -->
+          <div v-if="pendingActions.length > 0" class="relative z-30">
+            <UButton @click="isPendingActionsOpen = !isPendingActionsOpen" variant="ghost" size="sm"
+              class="rounded-full whitespace-nowrap font-bold transition-all border px-3 py-1.5" :class="[
+                pendingActions.some((a: any) => a.type === 'REJECTED')
+                  ? (isPendingActionsOpen ? 'text-red-700 dark:text-red-400 border-red-600 dark:border-red-400 bg-red-100 dark:bg-red-900/30' : 'text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20')
+                  : (isPendingActionsOpen ? 'text-amber-700 dark:text-amber-400 border-amber-600 dark:border-amber-400 bg-amber-100 dark:bg-amber-900/30' : 'text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/20')
+              ]">
+              <UIcon name="i-heroicons-exclamation-triangle" class="text-base flex-none" />
+              <span>{{ pendingActions.length }} Pendência{{ pendingActions.length > 1 ? 's' : '' }}</span>
+              <UIcon name="i-heroicons-chevron-down" class="text-xs ml-1 transition-transform"
+                :class="isPendingActionsOpen ? 'rotate-180' : ''" />
+            </UButton>
+
+            <!-- Dropdown Panel -->
+            <div v-if="isPendingActionsOpen"
+              class="absolute top-full right-0 mt-2 p-1 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl rounded-xl flex flex-col gap-1 z-50 animate-[fade-in_0.1s_ease-out]">
+              <button v-for="(action, idx) in pendingActions" :key="idx"
+                @click="jumpToWeek(action.year, action.week); isPendingActionsOpen = false"
+                class="flex items-center gap-2 p-2 rounded-lg text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 group w-full">
+                <UIcon :name="action.type === 'REJECTED' ? 'i-heroicons-x-circle' : 'i-heroicons-clock'"
+                  class="text-base flex-none" :class="action.type === 'REJECTED' ? 'text-red-500' : 'text-amber-500'" />
+                <div class="flex flex-col flex-1 min-w-0">
+                  <span
+                    class="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-[#0984e3] truncate">
+                    {{ action.label }}
+                  </span>
+                  <span class="text-[10px] text-slate-500 font-medium truncate">
+                    {{ action.type === 'REJECTED' ? (action.reason || 'Rejeitada') : 'Não enviada' }}
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Click Outside Overlay -->
+            <div v-if="isPendingActionsOpen" @click="isPendingActionsOpen = false" class="fixed inset-0 z-[-1]" />
+          </div>
+
           <div class="flex flex-col w-full gap-2">
             <div class="flex justify-between items-end">
               <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meta
