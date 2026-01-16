@@ -47,7 +47,8 @@ const assignments = computed(() => timesheetData.value?.assignments || [])
 const entries = computed(() => timesheet.value?.entries || [])
 const monthlyExpectedHours = computed(() => (timesheetData.value as any)?.user?.monthlyExpectedHours || 0)
 const monthlyWorkedHours = computed(() => {
-  return entries.value.reduce((acc: number, entry: any) => acc + Number(entry.duration || 0), 0)
+  // Use server-side aggregated total if available, fallback to 0
+  return Number((timesheetData.value as any)?.user?.monthlyWorkedHours || 0)
 })
 
 const goalPercentage = computed(() => {
@@ -56,9 +57,10 @@ const goalPercentage = computed(() => {
 })
 
 const goalColorClass = computed(() => {
-  if (goalPercentage.value >= 100) return 'bg-green-500'
-  if (goalPercentage.value >= 80) return 'bg-blue-500'
-  return 'bg-amber-500'
+  if (goalPercentage.value >= 100) return 'bg-green-500' // Goal Met
+  if (goalPercentage.value >= 66) return 'bg-blue-500'   // Good Progress
+  if (goalPercentage.value >= 33) return 'bg-orange-500' // Warming Up
+  return 'bg-red-500'                                    // Cold / Just Started
 })
 
 const hasAssignments = computed(() => assignments.value.length > 0)

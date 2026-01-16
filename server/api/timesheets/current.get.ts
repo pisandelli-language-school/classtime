@@ -203,6 +203,19 @@ export default defineEventHandler(async (event) => {
     })
   );
 
+  // Calculate Total Worked Hours for the Month (Aggregate)
+  const monthlyAggregation = await safeQuery(() =>
+    prisma.timeEntry.aggregate({
+      where: {
+        timesheetPeriodId: timesheet.id,
+      },
+      _sum: {
+        duration: true,
+      },
+    })
+  );
+  const monthlyWorkedHours = Number(monthlyAggregation._sum.duration || 0);
+
   return {
     timesheet: {
       ...timesheet,
@@ -212,6 +225,7 @@ export default defineEventHandler(async (event) => {
     userRole: dbUser.role,
     user: {
       monthlyExpectedHours,
+      monthlyWorkedHours, // Return aggregate total
     },
   };
 });
