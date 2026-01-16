@@ -70,9 +70,14 @@ const showAttendanceTab = computed(() => {
 })
 
 const validateForm = () => {
-  errors.subject = !state.subject || state.subject === ''
+  const isSpecialType = state.type === 'Master Class' || state.type === 'Aula Demonstrativa'
+  errors.subject = !isSpecialType && (!state.subject || state.subject === '')
   errors.startTime = !state.startTime
   errors.endTime = !state.endTime
+
+  if (state.startTime && state.endTime && state.endTime <= state.startTime) {
+    errors.endTime = true
+  }
   errors.type = !state.type
   errors.description = !state.description || state.description === ''
 
@@ -111,6 +116,13 @@ watch(() => props.modelValue, (val) => {
 
       Object.keys(errors).forEach(key => errors[key as keyof typeof errors] = false)
     }
+  }
+})
+
+watch(() => state.type, (newType) => {
+  if (newType === 'Master Class' || newType === 'Aula Demonstrativa') {
+    state.subject = undefined
+    errors.subject = false
   }
 })
 
@@ -184,29 +196,25 @@ const formattedDate = computed(() => {
       <!-- Tabs Header -->
       <div class="flex border-b border-slate-100 dark:border-slate-800">
         <!-- Info Tab -->
-        <button
-          @click="activeTab = 'info'"
-          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative"
-          :class="[
+        <button @click="activeTab = 'info'"
+          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative" :class="[
             hasInfoErrors ? 'text-red-600 bg-red-50 dark:bg-red-900/10 dark:text-red-400' : (activeTab === 'info' ? 'text-[#0984e3]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200')
-          ]"
-        >
+          ]">
           Informações
-          <span v-if="activeTab === 'info' && !hasInfoErrors" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
+          <span v-if="activeTab === 'info' && !hasInfoErrors"
+            class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
           <span v-if="hasInfoErrors" class="absolute bottom-0 left-0 w-full h-0.5 bg-red-500"></span>
         </button>
 
         <!-- Attendance Tab -->
-        <button
-          @click="showAttendanceTab || activeTab === 'attendance' ? activeTab = 'attendance' : null"
-          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative"
-          :class="[
+        <button @click="showAttendanceTab || activeTab === 'attendance' ? activeTab = 'attendance' : null"
+          class="flex-1 py-3 text-sm font-semibold text-center transition-colors relative" :class="[
             errors.attendance ? 'text-red-600 bg-red-50 dark:bg-red-900/10 dark:text-red-400' : (activeTab === 'attendance' ? 'text-[#0984e3]' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'),
             !showAttendanceTab ? 'opacity-50 cursor-not-allowed' : ''
-          ]"
-        >
+          ]">
           Presença
-          <span v-if="activeTab === 'attendance' && !errors.attendance" class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
+          <span v-if="activeTab === 'attendance' && !errors.attendance"
+            class="absolute bottom-0 left-0 w-full h-0.5 bg-[#0984e3]"></span>
           <span v-if="errors.attendance" class="absolute bottom-0 left-0 w-full h-0.5 bg-red-500"></span>
         </button>
       </div>
@@ -221,7 +229,11 @@ const formattedDate = computed(() => {
                 / Aluno <span class="text-red-500">*</span></label>
               <div class="relative">
                 <select v-model="state.subject"
-                  :class="{ 'ring-2 ring-red-500 dark:ring-red-500 focus:ring-red-500': errors.subject, 'ring-1 ring-slate-300 dark:ring-slate-700 focus:ring-2 focus:ring-[#0984e3]': !errors.subject }"
+                  :disabled="state.type === 'Master Class' || state.type === 'Aula Demonstrativa'" :class="{
+                    'ring-2 ring-red-500 dark:ring-red-500 focus:ring-red-500': errors.subject,
+                    'ring-1 ring-slate-300 dark:ring-slate-700 focus:ring-2 focus:ring-[#0984e3]': !errors.subject,
+                    'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-800': state.type === 'Master Class' || state.type === 'Aula Demonstrativa'
+                  }"
                   class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-inset sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:text-white transition-all">
                   <option :value="undefined" disabled>Selecione Turma ou Aluno...</option>
                   <option v-for="opt in (assignments || [])" :key="opt.id" :value="opt.id" class="dark:bg-slate-900">{{
@@ -255,6 +267,8 @@ const formattedDate = computed(() => {
                 <span class="text-red-500">*</span></label>
               <UInput v-model="state.endTime" type="time" class="w-full" size="md"
                 :class="{ 'ring-2 ring-red-500 rounded-md': errors.endTime }" />
+              <p v-if="errors.endTime && state.endTime && state.startTime && state.endTime <= state.startTime"
+                class="text-red-500 text-[10px] mt-1 font-medium">A hora final deve ser maior</p>
             </div>
           </div>
 

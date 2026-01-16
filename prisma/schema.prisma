@@ -117,8 +117,8 @@ model TimeEntry {
   description       String
   observations      String?
   type              String          @default("Normal")
-  assignmentId      String
-  assignment        Assignment      @relation(fields: [assignmentId], references: [id])
+  assignmentId      String?
+  assignment        Assignment?     @relation(fields: [assignmentId], references: [id])
 
   // Removed unique constraint to allow multiple entries per day for same assignment
   attendees Student[]

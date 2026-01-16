@@ -5,7 +5,7 @@ const upsertEntrySchema = z.object({
   timesheetId: z.string().min(1),
   date: z.string().datetime(), // ISO string from frontend
   duration: z.number().min(0).max(24),
-  assignmentId: z.string().min(1),
+  assignmentId: z.string().optional().nullable(),
   type: z.string().optional().default('Normal'),
   description: z.string().max(250).optional().default(''),
   observations: z.string().max(250).optional().default(''),
@@ -102,7 +102,9 @@ export default defineEventHandler(async (event) => {
         data: {
           date: new Date(date),
           duration,
-          assignment: { connect: { id: assignmentId } },
+          ...(assignmentId
+            ? { assignment: { connect: { id: assignmentId } } }
+            : { assignment: { disconnect: true } }),
           description,
           type,
           observations,
@@ -118,7 +120,9 @@ export default defineEventHandler(async (event) => {
           timesheetPeriod: { connect: { id: timesheetId } },
           date: new Date(date),
           duration,
-          assignment: { connect: { id: assignmentId } },
+          ...(assignmentId
+            ? { assignment: { connect: { id: assignmentId } } }
+            : {}),
           description,
           type,
           observations,
