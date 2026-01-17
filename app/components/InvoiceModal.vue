@@ -7,9 +7,10 @@ const props = defineProps<{
   data: any
   month: number
   year: number
+  initialItems?: { description: string, amount: number, type: 'CREDIT' | 'DEBIT' }[]
 }>()
 
-const emit = defineEmits(['update:modelValue', 'success'])
+const emit = defineEmits(['update:modelValue', 'success', 'update:items'])
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -17,8 +18,12 @@ const isOpen = computed({
 })
 
 const loading = ref(false)
-const items = ref<{ description: string, amount: number, type: 'CREDIT' | 'DEBIT' }[]>([])
+const items = ref<{ description: string, amount: number, type: 'CREDIT' | 'DEBIT' }[]>([...(props.initialItems || [])])
 const newItem = ref({ description: '', amountInput: '' })
+
+watch(items, (val) => {
+  emit('update:items', val)
+}, { deep: true })
 
 const addItem = (type: 'CREDIT' | 'DEBIT') => {
   const amountValue = parseFloat(newItem.value.amountInput.replace(/\./g, '').replace(',', '.'))
@@ -174,7 +179,7 @@ const submit = async () => {
               'dd/MM/yyyy') }}</span>
           </div>
           <span class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{{ formatCurrency(finalTotal)
-          }}</span>
+            }}</span>
         </div>
       </div>
 

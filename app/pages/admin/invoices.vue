@@ -3,13 +3,6 @@ import { subMonths, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 const now = new Date()
-const monthOptions = Array.from({ length: 12 }, (_, i) => {
-  const label = format(new Date(2000, i, 1), 'MMMM', { locale: ptBR })
-  return {
-    label: label.charAt(0).toUpperCase() + label.slice(1),
-    value: i + 1
-  }
-})
 
 // Initial State Logic: Default to previous month if early in current month (<= 10th)
 const getInitialState = () => {
@@ -31,8 +24,46 @@ const getInitialState = () => {
 
 const selectedDate = ref<{ month: number; year: number }>(getInitialState())
 
+const allMonths = Array.from({ length: 12 }, (_, i) => {
+  const label = format(new Date(2000, i, 1), 'MMMM', { locale: ptBR })
+  return {
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    value: i + 1
+  }
+})
+
+const monthOptions = computed(() => {
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
+
+  if (selectedDate.value.year === currentYear) {
+    return allMonths.filter(m => m.value <= currentMonth)
+  }
+
+  // If future year (though options only go up to current usually), block all or show none?
+  // Assuming years go up to current + 1 in some contexts, but here let's valid for past years.
+  // Actually year selector is [2024, 2025, 2026]. If current is 2026.
+  if (selectedDate.value.year > currentYear) {
+    return [] // No months available for future years
+  }
+
+  return allMonths
+})
+
+// Watch for year changes to ensure month is valid
+watch(() => selectedDate.value.year, () => {
+  // If selected month is no longer in options, reset to last available
+  const available = monthOptions.value.map(m => m.value)
+  if (!available.includes(selectedDate.value.month)) {
+    // If array is empty (future year), this might be weird, but let's assume we want max available
+    if (available.length > 0) {
+      selectedDate.value.month = Math.max(...available)
+    }
+  }
+})
+
 const currentPeriodLabel = computed(() => {
-  const m = monthOptions.find(opt => opt.value === selectedDate.value.month)
+  const m = monthOptions.value.find(opt => opt.value === selectedDate.value.month)
   return `${m?.label || ''} de ${selectedDate.value.year}`
 })
 
@@ -89,14 +120,34 @@ const openInvoiceModal = (item: any) => {
   isModalOpen.value = true
 }
 
-const handleInvoiceCreated = () => {
-  refresh()
-  isModalOpen.value = false
-}
 
 const router = useRouter()
 const viewInvoice = (invoiceId: string) => {
   router.push(`/admin/invoices/${invoiceId}`)
+}
+
+// Drafts Logic
+const drafts = ref<Record<string, any[]>>({})
+const getDraftKey = (teacherId: string) => `${teacherId}-${selectedDate.value.month}-${selectedDate.value.year}`
+
+const currentDraftItems = computed(() => {
+  if (!selectedTeacherForInvoice.value) return []
+  return drafts.value[getDraftKey(selectedTeacherForInvoice.value.id)] || []
+})
+
+const updateDraft = (items: any[]) => {
+  if (!selectedTeacherForInvoice.value) return
+  const key = getDraftKey(selectedTeacherForInvoice.value.id)
+  drafts.value[key] = items
+}
+
+const handleInvoiceCreated = () => {
+  if (selectedTeacherForInvoice.value) {
+    const key = getDraftKey(selectedTeacherForInvoice.value.id)
+    delete drafts.value[key]
+  }
+  refresh()
+  isModalOpen.value = false
 }
 </script>
 
@@ -270,6 +321,7 @@ const viewInvoice = (invoiceId: string) => {
 
     <!-- Invoice Creation Modal -->
     <InvoiceModal v-if="isModalOpen" v-model="isModalOpen" :data="selectedTeacherForInvoice" :month="selectedDate.month"
-      :year="selectedDate.year" @success="handleInvoiceCreated" />
+      :year="selectedDate.year" :initial-items="currentDraftItems" @update:items="(val) => updateDraft(val)"
+      @success="handleInvoiceCreated" />
   </div>
 </template>
