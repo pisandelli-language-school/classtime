@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -25,6 +24,7 @@ model User {
   timesheets     TimesheetPeriod[]
   auditLogs      AuditLog[]
   weeklyStatuses WeeklyTimesheetStatus[]
+  invoices       Invoice[]
 }
 
 model Assignment {
@@ -161,8 +161,54 @@ model WeeklyTimesheetStatus {
   status          WeeklyStatus @default(PENDING)
   rejectionReason String?
 
-  submissionDate DateTime?
-  approvalDate   DateTime?
+  approvalDate DateTime?
 
   @@unique([userId, year, week])
+}
+
+enum InvoiceStatus {
+  OPEN
+  CLOSED
+  PAID
+  VOID
+}
+
+model Invoice {
+  id        String        @id @default(uuid())
+  teacherId String
+  teacher   User          @relation(fields: [teacherId], references: [id])
+  month     Int
+  year      Int
+  status    InvoiceStatus @default(OPEN)
+
+  totalHours         Decimal @default(0)
+  totalAmount        Decimal @default(0)
+  hourlyRateSnapshot Decimal @default(0) // Rate at the time of closing
+
+  paymentDueDate DateTime?
+  closedAt       DateTime?
+  closedBy       String? // ID of the admin who closed it or 'SYSTEM'
+
+  items InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teacherId, month, year])
+}
+
+enum InvoiceItemType {
+  CREDIT
+  DEBIT
+}
+
+model InvoiceItem {
+  id          String          @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id])
+  description String
+  amount      Decimal
+  type        InvoiceItemType @default(CREDIT)
+
+  createdAt DateTime @default(now())
 }
