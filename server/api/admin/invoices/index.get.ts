@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
 
   // Admin Check
   const currentUser = await safeQuery(() =>
-    prisma.user.findUnique({ where: { email: user.email } })
+    prisma.user.findUnique({ where: { email: user.email } }),
   );
 
   if (
@@ -48,8 +48,18 @@ export default defineEventHandler(async (event) => {
         invoices: {
           where: { month, year },
         },
+        assignments: {
+          include: {
+            class: {
+              include: { contracts: { where: { status: 'ACTIVE' } } },
+            },
+            student: {
+              include: { contracts: { where: { status: 'ACTIVE' } } },
+            },
+          },
+        },
       },
-    })
+    }),
   );
 
   // 2. For each teacher, determine status
@@ -152,19 +162,48 @@ export default defineEventHandler(async (event) => {
 
       const totalHours = entries.reduce(
         (sum, e) => sum + Number(e.duration),
-        0
+        0,
       );
       // Approximate amount (using current rate)
       const rate = Number(t.hourlyRate || 0);
       const estAmount = totalHours * rate;
 
+      // Calculate Monthly Expected Hours from Assignments
+      let monthlyExpectedHours = 0;
+      if (t.assignments) {
+        t.assignments.forEach((a) => {
+          let weeklyHours = 0;
+
+          if (a.class) {
+            // Check Class Contract
+            if (a.class.contracts && a.class.contracts.length > 0) {
+              weeklyHours = Number(a.class.contracts[0].weeklyHours);
+            } else {
+              // Fallback to legacy field
+              weeklyHours = Number(a.class.weeklyHours || 0);
+            }
+          } else if (a.student) {
+            // Check Student Contract (Private Classes)
+            if (a.student.contracts && a.student.contracts.length > 0) {
+              weeklyHours = Number(a.student.contracts[0].weeklyHours);
+            }
+          }
+
+          monthlyExpectedHours += weeklyHours * 4;
+        });
+      }
+
       return {
         teacher: { id: t.id, name: t.name, email: t.email, hourlyRate: rate },
         status: allApproved ? 'READY' : 'PENDING',
         missingApprovals: pendingCount,
-        summary: { totalHours, amount: estAmount },
+        summary: {
+          totalHours,
+          expectedHours: monthlyExpectedHours,
+          amount: estAmount,
+        },
       };
-    })
+    }),
   );
 
   return { success: true, data: results };

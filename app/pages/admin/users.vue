@@ -141,7 +141,7 @@ const errorMessage = computed(() => {
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <tr v-for="user in filteredUsers" :key="user.id"
-                  class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors even:bg-slate-50 dark:even:bg-slate-800/30">
 
                   <!-- User Info -->
                   <td class="px-6 py-4">
