@@ -92,8 +92,8 @@ const formatDate = (dateStr: string | null) => {
     </div>
 
     <!-- Filters & Content -->
-    <main class="flex-1 overflow-auto p-6 min-h-0">
-      <div class="max-w-[1600px] mx-auto w-full h-full flex flex-col gap-6">
+    <main class="flex-1 overflow-hidden p-6 min-h-0 flex flex-col">
+      <div class="max-w-[1600px] mx-auto w-full h-full flex flex-col gap-6 min-h-0">
 
         <!-- Search & Filter Bar -->
         <UCard :ui="{ body: { padding: 'p-4 sm:p-4' } as any }">
@@ -132,8 +132,9 @@ const formatDate = (dateStr: string | null) => {
         </UCard>
 
         <!-- Contracts Table -->
-        <UCard :ui="{ body: { padding: 'p-0 sm:p-0' } as any }" class="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div class="overflow-auto min-h-0 h-full">
+        <div
+          class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex-1 flex flex-col min-h-0 overflow-hidden shadow-sm">
+          <div class="overflow-auto min-h-0 flex-1 relative custom-scrollbar">
             <!-- Pending State -->
             <div v-if="pending" class="flex justify-center items-center py-20">
               <UIcon name="i-heroicons-arrow-path" class="animate-spin text-4xl text-[#0984e3]" />
@@ -149,7 +150,7 @@ const formatDate = (dateStr: string | null) => {
             <!-- Table -->
             <table v-else class="w-full text-left text-sm whitespace-nowrap">
               <thead
-                class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-medium sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+                class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th class="px-6 py-3">Nome / Tipo</th>
                   <th class="px-6 py-3">Professor</th>
@@ -174,7 +175,7 @@ const formatDate = (dateStr: string | null) => {
 
                         <!-- Students Popover for Class (Manual) -->
                         <div class="relative" v-if="contract.type === 'Turma' && contract.students?.length">
-                          <UButton color="primary" variant="soft" size="2xs" icon="i-heroicons-users"
+                          <UButton color="primary" variant="soft" size="xs" icon="i-heroicons-users"
                             class="ml-1 rounded-full"
                             @click.stop="openStudentListId = openStudentListId === contract.id ? null : contract.id" />
 
@@ -185,7 +186,7 @@ const formatDate = (dateStr: string | null) => {
                               class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
                               <span class="font-bold text-xs text-slate-700 dark:text-slate-200">Alunos ({{
                                 contract.students.length }})</span>
-                              <UButton color="gray" variant="ghost" size="2xs" icon="i-heroicons-x-mark"
+                              <UButton color="neutral" variant="ghost" size="xs" icon="i-heroicons-x-mark"
                                 @click.stop="openStudentListId = null" />
                             </div>
                             <ul class="space-y-1 max-h-40 overflow-y-auto">
@@ -265,7 +266,7 @@ const formatDate = (dateStr: string | null) => {
               </tbody>
             </table>
           </div>
-        </UCard>
+        </div>
       </div>
     </main>
 

@@ -161,7 +161,8 @@ model WeeklyTimesheetStatus {
   status          WeeklyStatus @default(PENDING)
   rejectionReason String?
 
-  approvalDate DateTime?
+  submissionDate DateTime?
+  approvalDate   DateTime?
 
   @@unique([userId, year, week])
 }

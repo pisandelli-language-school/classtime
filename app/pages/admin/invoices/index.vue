@@ -123,6 +123,7 @@ const openInvoiceModal = (item: any) => {
 
 const router = useRouter()
 const viewInvoice = (invoiceId: string) => {
+  if (!invoiceId) return
   router.push(`/admin/invoices/${invoiceId}`)
 }
 
