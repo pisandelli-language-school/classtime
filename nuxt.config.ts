@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: true },
-  modules: ['@nuxt/ui', '@pinia/nuxt', '@nuxtjs/supabase'],
+  modules: ['@nuxt/ui', '@pinia/nuxt', '@nuxtjs/supabase', '@nuxt/content'],
   css: ['~/app.css'],
   supabase: {
     redirect: false,
@@ -56,5 +56,17 @@ export default defineNuxtConfig({
         '@vue/devtools-kit',
       ],
     },
+  },
+  components: {
+    dirs: [
+      {
+        path: '~/app/components/content',
+        global: true,
+      },
+      {
+        path: '~/app/components',
+        pathPrefix: false,
+      },
+    ],
   },
 });

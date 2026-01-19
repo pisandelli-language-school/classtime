@@ -1,13 +1,11 @@
 import { serverSupabaseUser } from '#supabase/server';
 import { safeQuery } from '../../../utils/db';
 import { Role, InvoiceStatus, InvoiceItemType } from '@prisma/client';
+import { getISOWeek, getISOWeekYear, endOfMonth, startOfMonth } from 'date-fns';
 import {
-  getISOWeek,
-  getISOWeekYear,
-  endOfMonth,
-  startOfMonth,
-  addBusinessDays,
-} from 'date-fns';
+  calculateInvoiceTotals,
+  calculatePaymentDueDate,
+} from '../../../utils/invoice';
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event);
@@ -17,7 +15,7 @@ export default defineEventHandler(async (event) => {
 
   // Admin Check
   const currentUser = await safeQuery(() =>
-    prisma.user.findUnique({ where: { email: user.email } })
+    prisma.user.findUnique({ where: { email: user.email } }),
   );
 
   if (
@@ -74,25 +72,18 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // 3. Calculate Totals
+  // 3. Calculate Totals Uses Utility
   const totalHours = entries.reduce((sum, e) => sum + Number(e.duration), 0);
   const hourlyRate = Number(teacher.hourlyRate || 0);
-  const baseAmount = totalHours * hourlyRate;
 
-  // Sum Adjustments
-  let adjustmentsTotal = 0;
-  if (items && Array.isArray(items)) {
-    items.forEach((item: any) => {
-      const val = Number(item.amount);
-      if (item.type === 'CREDIT') adjustmentsTotal += val;
-      if (item.type === 'DEBIT') adjustmentsTotal -= val;
-    });
-  }
-
-  const finalAmount = baseAmount + adjustmentsTotal;
+  const { finalAmount, baseAmount, adjustmentsTotal } = calculateInvoiceTotals(
+    totalHours,
+    hourlyRate,
+    items as any,
+  );
 
   // 4. Calculate Due Date (5 Business Days)
-  const dueDate = addBusinessDays(new Date(), 5);
+  const dueDate = calculatePaymentDueDate(new Date(), 5);
 
   // 5. Create Invoice Transaction
   const invoice = await prisma.invoice.create({
