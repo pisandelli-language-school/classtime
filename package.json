@@ -14,8 +14,10 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@nuxt/content": "^2.13.4",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "better-sqlite3": "^12.6.2",
     "date-fns": "^4.1.0",
     "googleapis": "^169.0.0",
     "nuxt": "^4.2.2",

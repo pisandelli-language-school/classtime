@@ -1,75 +1,86 @@
-# Nuxt Minimal Starter
+# ClassTime
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+![ClassTime Logo](public/logo.svg)
 
-## Setup
+> Sistema de Gestão de Horas, Contratos e Pagamentos para Escolas de Idiomas.
 
-Make sure to install dependencies:
+O **ClassTime** é uma plataforma full-stack moderna desenvolvida para otimizar o fluxo operacional entre Professores, Gerentes e Financeiro. Ele substitui planilhas manuais por um fluxo digital de aprovação de horas e geração automática de faturas.
 
-```bash
-# npm
-npm install
+## 🚀 Tech Stack
 
-# pnpm
-pnpm install
+- **Framework**: [Nuxt 4](https://nuxt.com) (Vue 3)
+- **Runtime**: [Bun](https://bun.sh)
+- **Database**: PostgreSQL (via Supabase)
+- **ORM**: Prisma
+- **Auth**: Supabase Auth
+- **UI**: Nuxt UI (TailwindCSS)
+- **Testing**: Vitest + @nuxt/test-utils
 
-# yarn
-yarn install
+## 🛠️ Configuração do Ambiente
 
-# bun
-bun install
-```
+### Pré-requisitos
+- [Bun](https://bun.sh) instalado (v1.0+)
+- Conta no Supabase
 
-## Development Server
+### Instalação
 
-Start the development server on `http://localhost:3000`:
+1.  **Clone o repositório**:
+    ```bash
+    git clone https://github.com/seu-org/classtime.git
+    cd classtime
+    ```
 
-```bash
-# npm
-npm run dev
+2.  **Instale as dependências**:
+    ```bash
+    bun install
+    ```
 
-# pnpm
-pnpm dev
+3.  **Configuração de Variáveis de Ambiente**:
+    Crie um arquivo `.env` na raiz:
+    ```bash
+    DATABASE_URL="postgres://..."
+    DIRECT_URL="postgres://..."
+    SUPABASE_URL="https://..."
+    SUPABASE_KEY="anon-key"
+    SUPABASE_SERVICE_KEY="service-role-key" # Para scripts administrativos
+    GOOGLE_WORKSPACE_DOMAIN="suaescola.com.br"
+    ```
 
-# yarn
-yarn dev
+4.  **Prepare o Banco de Dados**:
+    ```bash
+    bun x prisma migrate dev
+    bun x prisma db seed # Opcional: Popular com dados de teste
+    ```
 
-# bun
-bun run dev
-```
+5.  **Rode o servidor de desenvolvimento**:
+    ```bash
+    bun run dev
+    ```
 
-## Production
+## 🧪 Testes
 
-Build the application for production:
+O projeto utiliza **Vitest** para testes unitários e de integração.
 
-```bash
-# npm
-npm run build
+- **Rodar todos os teste**:
+  ```bash
+  bun run test
+  ```
+- **Rodar com relatório detalhado**:
+  ```bash
+  bun run test --reporter=verbose
+  ```
 
-# pnpm
-pnpm build
+## 📚 Documentação (Help System)
 
-# yarn
-yarn build
+O sistema possui uma central de ajuda integrada, construída com **Nuxt Content**.
+Acesse `/help` após iniciar a aplicação para ler os guias de uso para Professores e Gerentes.
 
-# bun
-bun run build
-```
+## 🏗️ Arquitetura
 
-Locally preview production build:
+- `server/api`: Endpoints da API (H3 handlers).
+- `prisma/schema.prisma`: Definição do banco de dados.
+- `app/pages`: Rotas do Nuxt (Frontend).
+- `content/help`: Arquivos Markdown da documentação.
 
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+---
+Desenvolvido com 💙 pela equipe de Engenharia.
