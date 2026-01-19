@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import path from 'path';
+import { getGoogleDirectoryService } from '../../../utils/google';
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
@@ -10,27 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 1. Google Auth & Directory API
-  const keyFilePath = path.resolve(
-    process.cwd(),
-    'classtime-481322-e6e3f2bf7f96.json'
-  );
-
-  const subject = process.env.ROOT_USER_EMAIL;
-  if (!subject) {
-    throw createError({
-      statusCode: 500,
-      statusMessage:
-        'Server configuration error: ROOT_USER_EMAIL is not defined in environment variables.',
-    });
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    keyFile: keyFilePath,
-    scopes: ['https://www.googleapis.com/auth/admin.directory.user.readonly'],
-    clientOptions: { subject },
-  });
-
-  const service = google.admin({ version: 'directory_v1', auth });
+  const service = getGoogleDirectoryService();
 
   try {
     // 2. Resolve Google ID to Email
@@ -68,7 +49,7 @@ export default defineEventHandler(async (event) => {
           role: 'TEACHER', // Default for new DB records
           hourlyRate: hourlyRate,
         },
-      })
+      }),
     );
 
     return { success: true, user: result };

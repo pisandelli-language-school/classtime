@@ -11,6 +11,7 @@ import {
 import { Role } from '@prisma/client';
 import { google } from 'googleapis';
 import path from 'path';
+import { getGoogleDirectoryService } from '../../utils/google';
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event);
@@ -20,7 +21,7 @@ export default defineEventHandler(async (event) => {
 
   // Admin Check
   const currentUser = await safeQuery(() =>
-    prisma.user.findUnique({ where: { email: user.email } })
+    prisma.user.findUnique({ where: { email: user.email } }),
   );
 
   if (
@@ -66,20 +67,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // 1. Google Auth & Directory API
-  const keyFilePath = path.resolve(
-    process.cwd(),
-    'classtime-481322-e6e3f2bf7f96.json'
-  );
-  const subject = process.env.ROOT_USER_EMAIL;
-
   let googleUsers: any[] = [];
   try {
-    const auth = new google.auth.GoogleAuth({
-      keyFile: keyFilePath,
-      scopes: ['https://www.googleapis.com/auth/admin.directory.user.readonly'],
-      clientOptions: { subject },
-    });
-    const service = google.admin({ version: 'directory_v1', auth });
+    const service = getGoogleDirectoryService();
     const googleRes = await service.users.list({
       customer: 'my_customer',
       orderBy: 'email',
@@ -87,11 +77,11 @@ export default defineEventHandler(async (event) => {
       projection: 'full',
     });
     googleUsers = googleRes.data.users || [];
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to fetch Google Users:', e);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Failed to fetch Google Users',
+      statusMessage: `Failed to fetch Google Users: ${e.message}`,
     });
   }
 
@@ -140,7 +130,7 @@ export default defineEventHandler(async (event) => {
           },
         },
       },
-    })
+    }),
   );
 
   const dbUserIds = dbUsers.map((u) => u.id);
@@ -162,7 +152,7 @@ export default defineEventHandler(async (event) => {
         date: true,
         timesheetPeriod: { select: { userId: true } },
       },
-    })
+    }),
   );
 
   // 5. Merge Data
@@ -170,7 +160,7 @@ export default defineEventHandler(async (event) => {
 
   relevantGoogleUsers.forEach((gUser: any) => {
     const dbUser = dbUsers.find(
-      (u) => u.email.toLowerCase() === gUser.primaryEmail?.toLowerCase()
+      (u) => u.email.toLowerCase() === gUser.primaryEmail?.toLowerCase(),
     ) as any;
 
     // Base user object
@@ -266,7 +256,7 @@ export default defineEventHandler(async (event) => {
 
       // 2. From Entries (already filtered by date range)
       const userEntries = timeEntries.filter(
-        (e) => e.timesheetPeriod.userId === dbUser.id
+        (e) => e.timesheetPeriod.userId === dbUser.id,
       );
       userEntries.forEach((e) => {
         const date = new Date(e.date);
@@ -291,7 +281,7 @@ export default defineEventHandler(async (event) => {
     weeksToProcess.forEach((wk) => {
       // Status Record
       const statusRecord = dbUser.weeklyStatuses.find(
-        (s: any) => s.year === wk.year && s.week === wk.week
+        (s: any) => s.year === wk.year && s.week === wk.week,
       );
 
       // If mode is backlog, we STRICTLY filter out APPROVED
@@ -311,7 +301,7 @@ export default defineEventHandler(async (event) => {
 
       const weeklyWorkedHours = userEntries.reduce(
         (acc, e) => acc + Number(e.duration),
-        0
+        0,
       );
 
       // Calculate Date Range Label

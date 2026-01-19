@@ -1,29 +1,10 @@
 import { google } from 'googleapis';
 import path from 'path';
+import { getGoogleDirectoryService } from '../../utils/google';
 
 export default defineEventHandler(async (event) => {
   // 1. Google Auth & Directory API
-  const keyFilePath = path.resolve(
-    process.cwd(),
-    'classtime-481322-e6e3f2bf7f96.json'
-  );
-
-  const subject = process.env.ROOT_USER_EMAIL;
-  if (!subject) {
-    throw createError({
-      statusCode: 500,
-      statusMessage:
-        'Server configuration error: ROOT_USER_EMAIL is not defined in environment variables.',
-    });
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    keyFile: keyFilePath,
-    scopes: ['https://www.googleapis.com/auth/admin.directory.user.readonly'],
-    clientOptions: { subject },
-  });
-
-  const service = google.admin({ version: 'directory_v1', auth });
+  const service = getGoogleDirectoryService();
 
   try {
     // 2. Fetch Google Users (Full Projection for Custom Schemas)
@@ -51,7 +32,7 @@ export default defineEventHandler(async (event) => {
             },
           },
         },
-      })
+      }),
     );
 
     // 4. Merge Data
@@ -59,7 +40,7 @@ export default defineEventHandler(async (event) => {
       // Find matching DB user by email
       // Find matching DB user by email
       const dbUser = dbUsers?.find(
-        (u) => u.email.toLowerCase() === gUser.primaryEmail?.toLowerCase()
+        (u) => u.email.toLowerCase() === gUser.primaryEmail?.toLowerCase(),
       );
 
       // Calculate Monthly Expected Hours from Assignments
@@ -148,12 +129,12 @@ export default defineEventHandler(async (event) => {
           u.name &&
           u.name !== 'Sem Nome' &&
           dbUsers?.find((dbU) => dbU.id === u.dbId)?.name ===
-            'Usuário (Sincronizado)'
+            'Usuário (Sincronizado)',
       );
 
       if (usersToUpdate.length > 0) {
         console.log(
-          `[AutoHeal] Updating ${usersToUpdate.length} user names...`
+          `[AutoHeal] Updating ${usersToUpdate.length} user names...`,
         );
         for (const u of usersToUpdate) {
           try {
