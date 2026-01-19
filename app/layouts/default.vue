@@ -47,7 +47,7 @@ const canViewAdmin = computed(() => {
     class="h-screen w-full grid grid-rows-[auto_1fr] bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
     <!-- Header -->
     <header
-      class="flex-none flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 py-3 bg-white dark:bg-slate-900 z-50">
+      class="flex-none flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 py-3 bg-white dark:bg-slate-900 z-50 print:hidden">
       <div class="flex items-center gap-4">
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center justify-center">
@@ -89,11 +89,7 @@ const canViewAdmin = computed(() => {
 
       <!-- Right Actions -->
       <div class="flex items-center gap-4">
-        <button
-          class="flex items-center justify-center size-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-white transition-colors">
-          <span class="material-symbols-outlined">settings</span>
-        </button>
-        <NotificationBell />
+
         <span v-if="user" class="text-sm font-medium text-slate-700 dark:text-slate-200 hidden sm:block">{{
           userMetadata.full_name || user.email }}</span>
         <div class="relative">
