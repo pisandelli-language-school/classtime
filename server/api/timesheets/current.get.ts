@@ -2,32 +2,66 @@ import { serverSupabaseUser } from '#supabase/server';
 import { safeQuery } from '../../utils/db';
 
 import { Role } from '@prisma/client';
+import { getGoogleDirectoryService } from '../../utils/google';
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event);
   if (!user || !user.email) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
   }
+  const userEmail = user.email!;
 
   // Sync User: Ensure local DB record exists
-  const isRoot = user.email === process.env.ROOT_USER_EMAIL;
+  const isRootEnv = user.email === process.env.ROOT_USER_EMAIL;
+
+  // 1. Fetch Google User Info to determine Role
+  let googleRole: Role = Role.TEACHER; // Default
+  let googleName: string =
+    user.user_metadata?.full_name || user.email || 'Sem Nome';
+
+  try {
+    const service = getGoogleDirectoryService();
+    // Resolve Google ID to Email
+    const googleUserRes = await service.users.get({
+      userKey: user.email,
+      projection: 'full',
+    });
+    const gUser = googleUserRes.data;
+    googleName = gUser.name?.fullName || googleName;
+
+    // Determine Role Logic (Matches users.get.ts)
+    if (gUser.isAdmin) {
+      googleRole = Role.ROOT;
+    } else {
+      const customFields = (gUser as any).customSchemas?.Custom_Fields || {};
+      if (customFields.manager === true || customFields.manager === 'true') {
+        googleRole = Role.MANAGER;
+      }
+      // If customFields.teacher is true, it remains TEACHER (default)
+    }
+  } catch (e) {
+    console.error('Failed to fetch Google User for role sync:', e);
+    // Fallback: If Env Root, force Root, otherwise keep default
+    if (isRootEnv) googleRole = Role.ROOT;
+  }
+
+  // Override if Env Variable matches (Super Admin)
+  if (isRootEnv) googleRole = Role.ROOT;
 
   let dbUser = await safeQuery(() =>
     prisma.user.upsert({
-      where: { email: user.email },
+      where: { email: userEmail },
       update: {
-        // Update role if it's the root user trying to regain access, otherwise keep existing
-        role: isRoot ? Role.ROOT : undefined,
-        // Always update name from Supabase metadata if available
-        name: user.user_metadata?.full_name || undefined,
+        role: googleRole,
+        name: googleName,
       },
       create: {
-        email: user.email,
-        name: user.user_metadata?.full_name || user.email, // Try to get name from Supabase meta
-        role: isRoot ? Role.ROOT : Role.TEACHER, // Default to Teacher for now as requested by user context generally, or Staff.
+        email: userEmail,
+        name: googleName,
+        role: googleRole,
         active: true,
       },
-    })
+    }),
   );
 
   const query = getQuery(event);
@@ -63,7 +97,7 @@ export default defineEventHandler(async (event) => {
     if (dbUser.role === Role.ROOT || dbUser.role === Role.MANAGER) {
       // Try to find the requested user locally
       let requestedUser = await safeQuery(() =>
-        prisma.user.findUnique({ where: { email: requestedTeacherEmail } })
+        prisma.user.findUnique({ where: { email: requestedTeacherEmail } }),
       );
 
       // If not found, Provision/sync them on demand (Lazy Loading)
@@ -77,7 +111,7 @@ export default defineEventHandler(async (event) => {
               role: Role.TEACHER,
               active: true,
             },
-          })
+          }),
         );
       }
 
@@ -120,7 +154,7 @@ export default defineEventHandler(async (event) => {
           },
         },
       },
-    })
+    }),
   );
 
   // Fetch target user's assignments
@@ -160,7 +194,7 @@ export default defineEventHandler(async (event) => {
           },
         },
       },
-    })
+    }),
   );
 
   // Calculate Monthly Expected Hours based on Active Contracts
@@ -200,7 +234,7 @@ export default defineEventHandler(async (event) => {
           select: { id: true, name: true },
         },
       },
-    })
+    }),
   );
 
   // Calculate Total Worked Hours for the Month (Aggregate)
@@ -212,7 +246,7 @@ export default defineEventHandler(async (event) => {
       _sum: {
         duration: true,
       },
-    })
+    }),
   );
   const monthlyWorkedHours = Number(monthlyAggregation._sum.duration || 0);
 
