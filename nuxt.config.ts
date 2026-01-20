@@ -60,11 +60,11 @@ export default defineNuxtConfig({
   components: {
     dirs: [
       {
-        path: '~/app/components/content',
+        path: '~/components/content',
         global: true,
       },
       {
-        path: '~/app/components',
+        path: '~/components',
         pathPrefix: false,
       },
     ],
