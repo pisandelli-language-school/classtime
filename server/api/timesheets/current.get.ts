@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   const userEmail = user.email!;
 
   // Sync User: Ensure local DB record exists
-  const isRootEnv = user.email === process.env.ROOT_USER_EMAIL;
+  const isRootEnv = userEmail === process.env.ROOT_USER_EMAIL;
 
   // 1. Fetch Google User Info to determine Role
   let googleRole: Role = Role.TEACHER; // Default
