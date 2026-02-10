@@ -7,6 +7,8 @@ export default defineEventHandler(async (event) => {
     studentId,
     name,
     type,
+    teacherEmail,
+    teacherName,
     totalHours,
     weeklyHours,
     startDate,
@@ -18,6 +20,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       statusMessage: 'Must provide either Entity ID or Name+Type',
+    });
+  }
+
+  if (!teacherEmail) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'É necessário informar um Professor Responsável.',
     });
   }
 
@@ -93,7 +102,30 @@ export default defineEventHandler(async (event) => {
         });
 
         // D. Create Assignment (Teacher Association)
-        const teacherId = body.teacherId;
+        // D. Create Assignment (Teacher Association)
+        // Resolve Teacher ID
+        let teacherId = null;
+        if (teacherEmail) {
+          const t = await tx.user.findUnique({
+            where: { email: teacherEmail },
+          });
+
+          if (t) {
+            teacherId = t.id;
+          } else {
+            // Create on the fly
+            const newTeacher = await tx.user.create({
+              data: {
+                email: teacherEmail,
+                name: teacherName || teacherEmail.split('@')[0],
+                role: 'TEACHER', // Force role
+                active: true,
+              },
+            });
+            teacherId = newTeacher.id;
+          }
+        }
+
         if (teacherId) {
           await tx.assignment.create({
             data: {
@@ -102,6 +134,8 @@ export default defineEventHandler(async (event) => {
               studentId: finalStudentId || undefined,
             },
           });
+        } else {
+          throw new Error('Falha ao definir professor.');
         }
 
         return { success: true, contract: newContract };

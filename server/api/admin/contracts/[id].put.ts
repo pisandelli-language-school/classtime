@@ -3,12 +3,27 @@ import { safeQuery } from '../../../utils/db';
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
-  const { totalHours, weeklyHours, startDate, endDate, teacherId } = body;
+  const {
+    totalHours,
+    weeklyHours,
+    startDate,
+    endDate,
+    teacherEmail,
+    teacherName,
+    studentNames,
+  } = body;
 
   if (!id) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Missing contract ID',
+    });
+  }
+
+  if (!teacherEmail) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'É necessário informar um Professor Responsável.',
     });
   }
 
@@ -54,7 +69,29 @@ export default defineEventHandler(async (event) => {
       }
 
       // 2. Update Teacher Assignment
-      if (teacherId) {
+      // Resolve Teacher ID
+      let resolvedTeacherId = null;
+      if (teacherEmail) {
+        // Find existing or create
+        const t = await prisma.user.findUnique({
+          where: { email: teacherEmail },
+        });
+        if (t) {
+          resolvedTeacherId = t.id;
+        } else {
+          const newTeacher = await prisma.user.create({
+            data: {
+              email: teacherEmail,
+              name: teacherName || teacherEmail.split('@')[0],
+              role: 'TEACHER',
+              active: true,
+            },
+          });
+          resolvedTeacherId = newTeacher.id;
+        }
+      }
+
+      if (resolvedTeacherId) {
         // Prepare Where Clause
         let whereClause = {};
         if (contract.classId) {
@@ -67,20 +104,22 @@ export default defineEventHandler(async (event) => {
           // Try Update Many
           const updateResult = await prisma.assignment.updateMany({
             where: whereClause,
-            data: { teacherId },
+            data: { teacherId: resolvedTeacherId },
           });
 
           // If none existed, create one
           if (updateResult.count === 0) {
             await prisma.assignment.create({
               data: {
-                teacherId,
+                teacherId: resolvedTeacherId,
                 classId: contract.classId || undefined,
                 studentId: contract.studentId || undefined,
               },
             });
           }
         }
+      } else {
+        throw new Error('Falha ao identificar o professor.');
       }
 
       return contract;

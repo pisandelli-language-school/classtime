@@ -41,7 +41,9 @@ type Schema = z.output<typeof schema>
 const state = reactive({
   name: '',
   type: 'Turma', // Default
-  teacherId: undefined as string | undefined,
+
+  teacherEmail: undefined as string | undefined, // Changed from teacherId to teacherEmail
+  teacherName: undefined as string | undefined,
   totalHours: 40,
   weeklyHours: 2,
   startDate: new Date().toISOString().split('T')[0],
@@ -62,8 +64,25 @@ const removeStudent = (index: number) => {
   state.students.splice(index, 1)
 }
 
+// Helper to get selected teacher object
 const selectedTeacher = computed(() => {
-  return teachers.value.find((t: any) => t.dbId === state.teacherId)
+  return teachers.value.find((t: any) => t.email === state.teacherEmail)
+})
+
+// Auto-switch to Turma if > 1 student
+watch(() => state.students.length, (newLength) => {
+  if (state.type === 'Aluno' && newLength > 1) {
+    state.type = 'Turma'
+    toast.add({ title: 'Aviso', description: 'Alterado para Turma (múltiplos alunos)', color: 'info' })
+  }
+})
+
+// Update teacher name when email changes
+watch(() => state.teacherEmail, (newEmail) => {
+  const t = teachers.value.find((u: any) => u.email === newEmail)
+  if (t) {
+    state.teacherName = t.name
+  }
 })
 
 // Auto Calculate End Date
@@ -90,15 +109,23 @@ watch(() => props.contract, (newVal) => {
     state.weeklyHours = Number(newVal.weeklyHours)
     state.startDate = newVal.startDate ? new Date(newVal.startDate).toISOString().split('T')[0] : ''
     state.endDate = newVal.predictedEndDate ? new Date(newVal.predictedEndDate).toISOString().split('T')[0] ?? '' : ''
-    state.teacherId = newVal.teacher?.id
+    state.teacherEmail = newVal.teacher?.email
+    state.teacherName = newVal.teacher?.name
     // Flatten students array to just names for editing
     state.students = newVal.students?.map((s: any) => s.name) || []
     // Name/Type hidden/fixed
+    // Fix: Set type correctly so validation passes (VIP vs Turma)
+    if (newVal.classId) {
+      state.type = 'Turma'
+    } else {
+      state.type = 'Aluno'
+    }
   } else {
     mode.value = 'CREATE'
     state.name = ''
     state.type = 'Turma'
-    state.teacherId = undefined
+    state.teacherEmail = undefined
+    state.teacherName = undefined
     state.totalHours = 40
     state.weeklyHours = 2
     state.startDate = new Date().toISOString().split('T')[0]
@@ -134,6 +161,12 @@ const onSubmit = async () => {
       return
     }
 
+    if (!state.teacherEmail) {
+      toast.add({ title: 'Erro', description: 'Selecione um Professor Responsável', color: 'error' })
+      isLoading.value = false
+      return
+    }
+
     if (state.type === 'Turma' && state.students.length < 2) {
       toast.add({ title: 'Erro', description: 'Uma turma deve ter no mínimo 2 alunos. Caso contrário, cadastre como VIP.', color: 'error' })
       isLoading.value = false
@@ -149,7 +182,8 @@ const onSubmit = async () => {
         endDate: state.endDate,
         name: state.name,
         type: state.type,
-        teacherId: state.teacherId,
+        teacherEmail: state.teacherEmail,
+        teacherName: state.teacherName,
         studentNames: state.students, // Send students list
       }
 
@@ -169,7 +203,8 @@ const onSubmit = async () => {
           weeklyHours: state.weeklyHours,
           startDate: state.startDate,
           endDate: state.endDate,
-          teacherId: state.teacherId,
+          teacherEmail: state.teacherEmail,
+          teacherName: state.teacherName,
           studentNames: state.students, // Send students list
         }
       })
@@ -274,14 +309,14 @@ const handleDelete = async () => {
           <div v-if="mode === 'CREATE' || mode === 'EDIT'">
             <label
               class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
-              Professor Responsável
+              Professor Responsável <span class="text-red-500">*</span>
             </label>
             <div class="relative">
-              <select v-model="state.teacherId"
+              <select v-model="state.teacherEmail"
                 class="appearance-none block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 bg-white dark:bg-slate-900 dark:ring-slate-700 dark:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="isUsersLoading">
-                <option :value="undefined">Selecione um Professor (Opcional)</option>
-                <option v-for="teacher in teachers" :key="teacher.dbId" :value="teacher.dbId">
+                <option :value="undefined">Selecione um Professor</option>
+                <option v-for="teacher in teachers" :key="teacher.email" :value="teacher.email">
                   {{ teacher.name }}
                 </option>
               </select>

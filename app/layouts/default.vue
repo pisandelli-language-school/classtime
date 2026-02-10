@@ -116,7 +116,7 @@ const canViewAdmin = computed(() => {
             class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 dark:ring-slate-700 z-40 transform origin-top-right transition-all">
             <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
               <p class="text-sm text-slate-900 dark:text-white font-medium truncate">{{ userMetadata.full_name || 'User'
-              }}</p>
+                }}</p>
               <p class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ user?.email }}</p>
             </div>
             <a href="#" @click.prevent="handleLogout"
@@ -132,6 +132,7 @@ const canViewAdmin = computed(() => {
     <!-- Page Content Slot Wrapper -->
     <div class="overflow-hidden relative flex flex-col min-h-0 h-full">
       <slot />
+      <Footer class="mt-auto" />
     </div>
 
     <!-- Global Loading Overlay -->
