@@ -43,7 +43,9 @@ const UFormMock = {
 
 describe('Component: ContractEditModal', () => {
   // Mock store data
-  const mockTeachers = ref([{ dbId: 't1', name: 'Teacher 1' }]);
+  const mockTeachers = ref([
+    { dbId: 't1', email: 't1@example.com', name: 'Teacher 1' },
+  ]);
   const mockFetchUsers = vi.fn();
 
   // Stub globals for auto-imports
@@ -88,7 +90,7 @@ describe('Component: ContractEditModal', () => {
       totalHours: 10,
       weeklyHours: 1,
       startDate: '2023-01-01',
-      teacher: { id: 't1' },
+      teacher: { id: 't1', email: 't1@example.com', name: 'Teacher 1' },
     };
 
     const wrapper = await mountSuspended(ContractEditModal, {
@@ -101,11 +103,13 @@ describe('Component: ContractEditModal', () => {
 
     await nextTick();
 
+    const vm = wrapper.vm as any;
+
     // Verify type was set to 'Aluno' from 'studentId'
-    expect(wrapper.vm.state.type).toBe('Aluno');
+    expect(vm.state.type).toBe('Aluno');
 
     // Attempt submit
-    await wrapper.vm.onSubmit();
+    await vm.onSubmit();
 
     await nextTick();
 
@@ -133,7 +137,7 @@ describe('Component: ContractEditModal', () => {
       totalHours: 10,
       weeklyHours: 1,
       startDate: '2023-01-01',
-      teacher: { id: 't1' },
+      teacher: { id: 't1', email: 't1@example.com', name: 'Teacher 1' },
     };
 
     const wrapper = await mountSuspended(ContractEditModal, {
@@ -146,11 +150,13 @@ describe('Component: ContractEditModal', () => {
 
     await nextTick();
 
+    const vm = wrapper.vm as any;
+
     // Verify type was set to 'Turma'
-    expect(wrapper.vm.state.type).toBe('Turma');
+    expect(vm.state.type).toBe('Turma');
 
     // Attempt submit
-    await wrapper.vm.onSubmit();
+    await vm.onSubmit();
 
     // Should SHOW error toast
     expect(toastAddMock).toHaveBeenCalledWith(
@@ -169,7 +175,7 @@ describe('Component: ContractEditModal', () => {
       totalHours: 10,
       weeklyHours: 1,
       startDate: '2023-01-01',
-      teacher: { id: 't1' },
+      teacher: { id: 't1', email: 't1@example.com', name: 'Teacher 1' },
     };
 
     const wrapper = await mountSuspended(ContractEditModal, {
@@ -182,9 +188,11 @@ describe('Component: ContractEditModal', () => {
 
     await nextTick();
 
-    expect(wrapper.vm.state.type).toBe('Turma');
+    const vm = wrapper.vm as any;
 
-    await wrapper.vm.onSubmit();
+    expect(vm.state.type).toBe('Turma');
+
+    await vm.onSubmit();
 
     expect(toastAddMock).not.toHaveBeenCalledWith(
       expect.objectContaining({
@@ -194,6 +202,67 @@ describe('Component: ContractEditModal', () => {
     expect(toastAddMock).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Sucesso',
+      }),
+    );
+  });
+  it('should validate mandatory teacher selection', async () => {
+    const wrapper = await mountSuspended(ContractEditModal, {
+      props: {
+        modelValue: true,
+        // no contract prop = CREATE mode
+      },
+      global: globalConfig,
+    });
+
+    await nextTick();
+
+    const vm = wrapper.vm as any;
+
+    // Fill other fields
+    vm.state.name = 'New Class';
+    vm.state.teacherEmail = undefined; // No teacher
+
+    await vm.onSubmit();
+
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: expect.stringContaining('Selecione um Professor'),
+        color: 'error',
+      }),
+    );
+  });
+
+  it('should auto-switch VIP to Turma if > 1 student added', async () => {
+    const wrapper = await mountSuspended(ContractEditModal, {
+      props: {
+        modelValue: true,
+      },
+      global: globalConfig,
+    });
+
+    await nextTick();
+
+    const vm = wrapper.vm as any;
+
+    // Set to VIP
+    vm.state.type = 'Aluno';
+
+    // Add 1 student
+    vm.state.students.push('Student A');
+    await nextTick();
+    expect(vm.state.type).toBe('Aluno'); // Still VIP
+
+    // Add 2nd student
+    vm.state.students.push('Student B');
+    await nextTick();
+
+    // Should switch
+    expect(vm.state.type).toBe('Turma');
+
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: expect.stringContaining('Alterado para Turma'),
+        title: 'Aviso',
       }),
     );
   });
