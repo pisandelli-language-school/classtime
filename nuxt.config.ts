@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import pkg from './package.json';
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: true },
@@ -11,6 +13,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       googleWorkspaceDomain: process.env.GOOGLE_WORKSPACE_DOMAIN,
+      appVersion: pkg.version || '0.0.0',
     },
   },
   future: {
