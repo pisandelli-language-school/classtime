@@ -94,6 +94,12 @@ watch(() => props.contract, (newVal) => {
     // Flatten students array to just names for editing
     state.students = newVal.students?.map((s: any) => s.name) || []
     // Name/Type hidden/fixed
+    // Fix: Set type correctly so validation passes (VIP vs Turma)
+    if (newVal.classId) {
+      state.type = 'Turma'
+    } else {
+      state.type = 'Aluno'
+    }
   } else {
     mode.value = 'CREATE'
     state.name = ''
