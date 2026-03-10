@@ -62,6 +62,11 @@ const canViewAdmin = computed(() => {
             active-class="text-primary">
             Timesheet
           </NuxtLink>
+          <NuxtLink to="/reports"
+            class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
+            active-class="text-primary">
+            Relatórios
+          </NuxtLink>
           <template v-if="canViewAdmin">
             <NuxtLink to="/admin/approvals"
               class="text-sm font-medium hover:text-primary transition-colors text-slate-500 dark:text-slate-400"
