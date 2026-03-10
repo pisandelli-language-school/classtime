@@ -105,6 +105,7 @@ watch(() => [state.totalHours, state.weeklyHours, state.startDate], () => {
 watch(() => props.contract, (newVal) => {
   if (newVal) {
     mode.value = 'EDIT' // Default to edit
+    state.name = newVal.subjectName || '' // Populate name for editing
     state.totalHours = Number(newVal.totalHours)
     state.weeklyHours = Number(newVal.weeklyHours)
     state.startDate = newVal.startDate ? new Date(newVal.startDate).toISOString().split('T')[0] : ''
@@ -155,7 +156,7 @@ const onSubmit = async () => {
   isLoading.value = true
   try {
     // Validation
-    if (mode.value === 'CREATE' && !state.name) {
+    if (!state.name) {
       toast.add({ title: 'Erro', description: 'Informe o Nome', color: 'error' })
       isLoading.value = false
       return
@@ -199,6 +200,7 @@ const onSubmit = async () => {
       await $fetch(`/api/admin/contracts/${props.contract.id}`, {
         method: 'PUT',
         body: {
+          name: state.name,
           totalHours: state.totalHours,
           weeklyHours: state.weeklyHours,
           startDate: state.startDate,
@@ -270,21 +272,20 @@ const handleDelete = async () => {
       <div class="p-6">
         <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
 
-          <!-- Name & Type (Create Only) -->
-          <div v-if="mode === 'CREATE'" class="space-y-4">
-            <!-- Name Field -->
-            <div>
-              <label
-                class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
-                Nome <span class="text-red-500">*</span>
-              </label>
-              <div class="relative">
-                <input v-model="state.name" placeholder="Ex: Fraport Advanced ou Pedro Antônio" type="text"
-                  class="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 dark:bg-slate-900 dark:ring-slate-700 dark:text-white" />
-              </div>
+          <!-- Name (Create & Edit) -->
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
+              Nome (Turma/Aluno) <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <input v-model="state.name" placeholder="Ex: Fraport Advanced ou Pedro Antônio" type="text"
+                class="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 dark:bg-slate-900 dark:ring-slate-700 dark:text-white" />
             </div>
+          </div>
 
-            <!-- Type Toggle -->
+          <!-- Type (Create Only) -->
+          <div v-if="mode === 'CREATE'" class="space-y-4">
             <div>
               <label
                 class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">

@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
     teacherEmail,
     teacherName,
     studentNames,
+    name,
   } = body;
 
   if (!id) {
@@ -30,7 +31,6 @@ export default defineEventHandler(async (event) => {
   try {
     return await safeQuery(async () => {
       // 1. Update Contract
-      // 1. Update Contract
       const contract = await prisma.contract.update({
         where: { id },
         data: {
@@ -41,6 +41,22 @@ export default defineEventHandler(async (event) => {
         },
         include: { class: true, student: true },
       });
+
+      // 1a. Update Subject Name if provided
+      if (name && name.trim()) {
+        const trimmedName = name.trim();
+        if (contract.classId && contract.class?.name !== trimmedName) {
+          await prisma.class.update({
+            where: { id: contract.classId },
+            data: { name: trimmedName }
+          });
+        } else if (contract.studentId && contract.student?.name !== trimmedName) {
+          await prisma.student.update({
+            where: { id: contract.studentId },
+            data: { name: trimmedName }
+          });
+        }
+      }
 
       // 1b. Update Class Students if applicable
       if (contract.classId && body.studentNames) {
