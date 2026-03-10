@@ -1,6 +1,6 @@
 {
   "name": "ClassTime",
-  "version": "0.0.6-beta",
+  "version": "0.1.0-beta",
   "type": "module",
   "private": true,
   "scripts": {
