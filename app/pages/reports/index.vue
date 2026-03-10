@@ -60,17 +60,23 @@ watch(selectedYear, () => {
 })
 
 // Fetch Teachers using /api/admin/users
-const { data: usersData, pending: teachersPending } = await useFetch('/api/admin/users', {
+const { data: usersData, pending: teachersPending, execute: fetchTeachers } = await useFetch('/api/admin/users', {
   lazy: true,
-  // Only admins need the full list. Teachers only need themselves.
-  immediate: isAdmin.value
+  immediate: false, // We will trigger it manually to ensure isAdmin is evaluated
 })
+
+watch(isAdmin, (newVal) => {
+  if (newVal && !usersData.value) {
+    fetchTeachers()
+  }
+}, { immediate: true })
 
 const teachersOptions = computed(() => {
   if (!isAdmin.value) {
     return [{ label: (timesheetData.value as any)?.user?.name || 'Eu', value: user.value?.id }]
   }
-  const users = usersData.value?.users || []
+  const data = usersData.value as any
+  const users = data?.users || []
   return users
     .filter((u: any) => u.isTeacher && u.dbId)
     .map((u: any) => ({
