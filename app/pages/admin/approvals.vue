@@ -203,17 +203,18 @@ const getWeekLabel = (year: number, week: number) => {
             <div v-else-if="filteredApprovals.length === 0" class="p-12 text-center text-slate-400">
                 <p>Nenhum registro encontrado.</p>
             </div>
-            <table v-else class="w-full text-sm text-left">
-                <thead
-                    class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                    <tr>
-                        <th class="px-6 py-3">Professor</th>
-                        <th class="px-6 py-3 text-center">Semana</th>
-                        <th class="px-6 py-3 text-center">Horas da Semana</th>
-                        <th class="px-6 py-3 text-center">Status</th>
-                        <th class="px-6 py-3 text-right">Ações</th>
-                    </tr>
-                </thead>
+            <div v-else class="overflow-x-auto max-h-[600px] overflow-y-auto custom-scrollbar">
+                <table class="w-full text-sm text-left relative">
+                    <thead
+                        class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-6 py-3">Professor</th>
+                            <th class="px-6 py-3 text-center">Semana</th>
+                            <th class="px-6 py-3 text-center">Horas da Semana</th>
+                            <th class="px-6 py-3 text-center">Status</th>
+                            <th class="px-6 py-3 text-right">Ações</th>
+                        </tr>
+                    </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <tr v-for="item in filteredApprovals" :key="item.id || item.googleId + item.weekInfo?.week"
                         class="border-b dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer transition-colors even:bg-slate-50 dark:even:bg-slate-800/30"
@@ -288,6 +289,7 @@ const getWeekLabel = (year: number, week: number) => {
                     </tr>
                 </tbody>
             </table>
+            </div>
         </UCard>
 
         <!-- Detailed Modal -->
