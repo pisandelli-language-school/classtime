@@ -34,6 +34,7 @@ const schema = z.object({
   weeklyHours: z.number().min(0, 'Não pode ser negativo'),
   startDate: z.string().min(1, 'Data obrigatória'),
   endDate: z.string().optional(),
+  status: z.string().optional(),
 })
 
 type Schema = z.output<typeof schema>
@@ -41,6 +42,7 @@ type Schema = z.output<typeof schema>
 const state = reactive({
   name: '',
   type: 'Turma', // Default
+  status: 'ACTIVE',
 
   teacherEmail: undefined as string | undefined, // Changed from teacherId to teacherEmail
   teacherName: undefined as string | undefined,
@@ -114,6 +116,7 @@ watch(() => props.contract, (newVal) => {
     state.teacherName = newVal.teacher?.name
     // Flatten students array to just names for editing
     state.students = newVal.students?.map((s: any) => s.name) || []
+    state.status = newVal.status || 'ACTIVE'
     // Name/Type hidden/fixed
     // Fix: Set type correctly so validation passes (VIP vs Turma)
     if (newVal.classId) {
@@ -131,6 +134,7 @@ watch(() => props.contract, (newVal) => {
     state.weeklyHours = 2
     state.startDate = new Date().toISOString().split('T')[0]
     state.students = []
+    state.status = 'ACTIVE'
     autoCalcEndDate()
   }
 }, { immediate: true })
@@ -208,6 +212,7 @@ const onSubmit = async () => {
           teacherEmail: state.teacherEmail,
           teacherName: state.teacherName,
           studentNames: state.students, // Send students list
+          status: state.status,
         }
       })
       toast.add({ title: 'Sucesso', description: 'Contrato atualizado.', color: 'success' })
@@ -281,6 +286,27 @@ const handleDelete = async () => {
             <div class="relative">
               <input v-model="state.name" placeholder="Ex: Fraport Advanced ou Pedro Antônio" type="text"
                 class="block w-full rounded-md border-0 py-1.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#0984e3] sm:text-sm sm:leading-6 dark:bg-slate-900 dark:ring-slate-700 dark:text-white" />
+            </div>
+          </div>
+
+          <!-- Status (Edit Only) -->
+          <div v-if="mode === 'EDIT'" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
+                Status
+              </label>
+              <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                <button type="button" @click="state.status = 'ACTIVE'"
+                  class="flex-1 text-xs font-bold py-1.5 rounded-md transition-all"
+                  :class="state.status === 'ACTIVE' ? 'bg-white dark:bg-slate-700 shadow-sm text-green-600 dark:text-green-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'">
+                  Ativo
+                </button>
+                <button type="button" @click="state.status = 'ARCHIVED'"
+                  class="flex-1 text-xs font-bold py-1.5 rounded-md transition-all"
+                  :class="state.status === 'ARCHIVED' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-500 dark:text-slate-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'">
+                  Inativo (Arquivado)
+                </button>
+              </div>
             </div>
           </div>
 
@@ -407,7 +433,7 @@ const handleDelete = async () => {
       <!-- Footer Buttons (Styled like TimesheetModal) -->
       <div
         class="px-6 py-4 bg-slate-50 dark:bg-slate-900 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
-        <button v-if="mode === 'EDIT'"
+        <button v-if="mode === 'EDIT' && state.status === 'ARCHIVED'"
           class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors mr-auto"
           @click="handleDelete">
           Excluir

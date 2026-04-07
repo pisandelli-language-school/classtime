@@ -8,9 +8,6 @@ export default defineEventHandler(async (event) => {
 
     const contracts = await safeQuery(() =>
       prisma.contract.findMany({
-        where: {
-          status: 'ACTIVE',
-        },
         include: {
           class: {
             include: {

@@ -3,6 +3,7 @@ const { data: contractsData, pending, error, refresh } = useFetch('/api/admin/co
 
 const search = ref('')
 const selectedType = ref<string | null>(null) // null = All
+const selectedStatus = ref<string | null>('ACTIVE') // null = All
 const selectedTeacherId = ref<string | null>(null)
 const isModalOpen = ref(false)
 const selectedContract = ref<any>(null) // If null, create new mode
@@ -19,6 +20,12 @@ const typeOptions = [
   { label: 'Todos', value: null },
   { label: 'Turmas', value: 'Turma' },
   { label: 'Alunos', value: 'Aluno' }
+]
+
+const statusOptions = [
+  { label: 'Todos', value: null },
+  { label: 'Ativos', value: 'ACTIVE' },
+  { label: 'Inativos', value: 'ARCHIVED' }
 ]
 
 const filteredContracts = computed(() => {
@@ -43,6 +50,11 @@ const filteredContracts = computed(() => {
   // Teacher Filter
   if (selectedTeacherId.value) {
     contracts = contracts.filter((c: any) => c.teacher?.id === selectedTeacherId.value)
+  }
+
+  // Status Filter
+  if (selectedStatus.value) {
+    contracts = contracts.filter((c: any) => c.status === selectedStatus.value)
   }
 
   return contracts
@@ -114,6 +126,16 @@ const formatDate = (dateStr: string | null) => {
                 </button>
               </div>
 
+              <!-- Status Filter (Button Group) -->
+              <div class="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-full sm:w-auto">
+                <button v-for="opt in statusOptions" :key="opt.label" @click="selectedStatus = opt.value"
+                  class="flex-1 sm:flex-none px-3 py-1.5 text-xs font-semibold rounded-md transition-colors" :class="selectedStatus === opt.value
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'">
+                  {{ opt.label }}
+                </button>
+              </div>
+
               <!-- Teacher Filter (Native Select) -->
               <div class="relative w-full sm:w-64">
                 <select v-model="selectedTeacherId"
@@ -162,15 +184,22 @@ const formatDate = (dateStr: string | null) => {
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <tr v-for="contract in filteredContracts" :key="contract.id"
-                  class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  :class="{ 'opacity-60 grayscale-[0.5]': contract.status === 'ARCHIVED' }">
 
                   <!-- Name & Type -->
                   <td class="px-6 py-4">
                     <div class="flex flex-col">
                       <span class="font-medium text-slate-900 dark:text-white">{{ contract.subjectName }}</span>
-                      <div class="mt-1 flex gap-2 items-center">
+                      <div class="mt-1 flex flex-wrap gap-2 items-center">
                         <UBadge :color="contract.type === 'Turma' ? 'primary' : 'secondary'" variant="subtle" size="sm">
                           {{ contract.type }}
+                        </UBadge>
+                        <UBadge v-if="contract.status === 'ARCHIVED'" color="neutral" variant="soft" size="xs">
+                          Inativo
+                        </UBadge>
+                        <UBadge v-else color="success" variant="soft" size="xs">
+                          Ativo
                         </UBadge>
 
                         <!-- Students Popover for Class (Manual) -->

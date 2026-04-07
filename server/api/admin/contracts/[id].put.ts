@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
     teacherName,
     studentNames,
     name,
+    status,
   } = body;
 
   if (!id) {
@@ -38,6 +39,7 @@ export default defineEventHandler(async (event) => {
           weeklyHours,
           startDate: startDate ? new Date(startDate) : undefined,
           endDate: endDate ? new Date(endDate) : undefined,
+          ...(status && { status }),
         },
         include: { class: true, student: true },
       });
