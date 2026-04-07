@@ -280,7 +280,7 @@ const getWeekLabel = (year: number, week: number) => {
                             </UButton>
                             <!-- Reopen Action (Root Only) -->
                             <UTooltip
-                                v-if="approvalsData.currentUserRole === 'ROOT' && (item.status === 'APPROVED' || item.status === 'REJECTED')"
+                                v-if="approvalsData?.currentUserRole === 'ROOT' && (item.status === 'APPROVED' || item.status === 'REJECTED')"
                                 text="Reabrir Semana (Root)">
                                 <UButton size="xs" color="warning" variant="ghost" icon="i-heroicons-arrow-path"
                                     class="ml-2" @click.stop="handleApprovalAction('REOPEN', undefined, item)" />
