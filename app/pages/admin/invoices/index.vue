@@ -219,7 +219,7 @@ const handleInvoiceCreated = () => {
         </div>
 
         <!-- Custom Table -->
-        <div v-else class="overflow-x-auto overflow-y-auto custom-scrollbar">
+        <div v-else class="overflow-x-auto max-h-[600px] overflow-y-auto custom-scrollbar">
           <table class="w-full text-sm text-left relative">
             <thead
               class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
